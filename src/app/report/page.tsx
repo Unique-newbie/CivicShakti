@@ -237,7 +237,7 @@ export default function ReportClient() {
                                 </div>
 
                                 <div className="rounded-sm border border-slate-300 bg-slate-100 min-h-[350px] flex items-center justify-center relative overflow-hidden z-10 block">
-                                    <MapPicker onLocationSelect={(newLat, newLng) => { setLat(newLat); setLng(newLng); }} />
+                                    <MapPicker onLocationSelect={(newLat, newLng, addr) => { setLat(newLat); setLng(newLng); if (addr) setAddress(addr); }} />
                                     <div className="absolute bottom-4 right-4 z-[400] bg-white px-3 py-1.5 rounded shadow text-xs font-medium text-slate-600 pointer-events-none">
                                         {lat && lng ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : 'Click map to drop pin'}
                                     </div>

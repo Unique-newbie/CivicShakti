@@ -46,7 +46,7 @@ export default function ExplorePage() {
                     </div>
 
                     {/* Map Container */}
-                    <div className="relative rounded-sm overflow-hidden shadow-none border border-slate-300 mt-2 bg-white flex-1 p-2 min-h-[600px]">
+                    <div className="relative rounded-sm overflow-hidden shadow-none border border-slate-300 mt-2 bg-white h-[650px]">
                         <PublicMap />
                     </div>
                 </div>
