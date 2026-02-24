@@ -6,12 +6,15 @@ import {
     ArrowLeft, MapPin, AlertCircle, Loader2, CalendarDays,
     Image as ImageIcon, CheckCircle2, Clock, Activity, Eye,
     AlertTriangle, ShieldAlert, Hash, Building2, Zap,
-    ChevronRight, Copy, Share2, Flag
+    ChevronRight, Copy, Share2, Flag, Star
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { databases, appwriteConfig } from "@/lib/appwrite";
+
+const MiniMap = dynamic(() => import("@/components/MiniMap"), { ssr: false });
 import { Query, Models } from "appwrite";
 import { toast } from "sonner";
 
@@ -66,10 +69,12 @@ interface Complaint extends Models.Document {
     ai_priority_score?: number;
     ai_analysis?: string;
     upvotes?: number;
-    latitude?: number;
-    longitude?: number;
+    lat?: number;
+    lng?: number;
     $createdAt: string;
     logs: StatusLog[];
+    citizen_feedback_rating?: number;
+    citizen_feedback_text?: string;
 }
 
 interface StatusLog extends Models.Document {
@@ -114,6 +119,10 @@ export default function TrackDetail({ params }: { params: Promise<{ id: string }
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
+    const [rating, setRating] = useState<number>(0);
+    const [feedbackText, setFeedbackText] = useState("");
+    const [hoverRating, setHoverRating] = useState<number>(0);
+    const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
     useEffect(() => {
         async function fetchComplaint() {
@@ -170,6 +179,38 @@ export default function TrackDetail({ params }: { params: Promise<{ id: string }
         } else {
             navigator.clipboard.writeText(url);
             toast.success("Link copied to clipboard");
+        }
+    };
+
+    const handleFeedbackSubmit = async () => {
+        if (!rating) {
+            toast.error("Please provide a star rating.");
+            return;
+        }
+        setSubmittingFeedback(true);
+        try {
+            const res = await fetch("/api/citizen/feedback", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    complaintId: data?.$id,
+                    trackingId: data?.tracking_id,
+                    rating,
+                    feedbackText
+                })
+            });
+
+            if (!res.ok) throw new Error("Failed to submit feedback");
+
+            toast.success("Thank you for your feedback!");
+            if (data) {
+                setData({ ...data, citizen_feedback_rating: rating, citizen_feedback_text: feedbackText });
+            }
+        } catch (error) {
+            toast.error("An error occurred while submitting your feedback.");
+            console.error(error);
+        } finally {
+            setSubmittingFeedback(false);
         }
     };
 
@@ -360,6 +401,62 @@ export default function TrackDetail({ params }: { params: Promise<{ id: string }
                                 )}
                             </CardContent>
                         </Card>
+
+                        {/* Feedback Section (Only shown if resolved) */}
+                        {data.status === 'resolved' && (
+                            <Card className="rounded-sm border-emerald-200 shadow-none bg-emerald-50/50">
+                                <CardHeader className="pb-3 border-b border-emerald-100">
+                                    <CardTitle className="text-base font-bold text-emerald-900">Provide Feedback</CardTitle>
+                                </CardHeader>
+                                <CardContent className="pt-5 space-y-4">
+                                    {data.citizen_feedback_rating ? (
+                                        <div className="space-y-3">
+                                            <div className="flex gap-1">
+                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                    <Star key={star} className={`w-5 h-5 ${star <= data.citizen_feedback_rating! ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`} />
+                                                ))}
+                                            </div>
+                                            {data.citizen_feedback_text && (
+                                                <p className="text-sm text-slate-700 italic border-l-2 border-emerald-300 pl-3">
+                                                    "{data.citizen_feedback_text}"
+                                                </p>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <p className="text-sm text-slate-600">How satisfied are you with the resolution of this complaint?</p>
+                                            <div className="flex gap-2">
+                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                    <button
+                                                        key={star}
+                                                        onClick={() => setRating(star)}
+                                                        onMouseEnter={() => setHoverRating(star)}
+                                                        onMouseLeave={() => setHoverRating(0)}
+                                                        className="focus:outline-none transition-transform hover:scale-110"
+                                                    >
+                                                        <Star className={`w-8 h-8 ${star <= (hoverRating || rating) ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`} />
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <textarea
+                                                className="w-full text-sm p-3 rounded-sm border border-emerald-200 outline-none focus:ring-2 focus:ring-emerald-500 min-h-[80px]"
+                                                placeholder="Any additional remarks? (Optional)"
+                                                value={feedbackText}
+                                                onChange={(e) => setFeedbackText(e.target.value)}
+                                            />
+                                            <Button
+                                                onClick={handleFeedbackSubmit}
+                                                disabled={submittingFeedback || rating === 0}
+                                                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-sm w-full sm:w-auto"
+                                            >
+                                                {submittingFeedback ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                                Submit Feedback
+                                            </Button>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
                     </div>
 
                     {/* Sidebar */}
@@ -434,11 +531,17 @@ export default function TrackDetail({ params }: { params: Promise<{ id: string }
                             <CardContent>
                                 <p className="text-sm text-slate-600 mb-3">{data.address || "No address provided"}</p>
                                 {data.address && (
-                                    <div className="h-36 bg-slate-100 rounded-sm overflow-hidden relative border border-slate-200">
-                                        <div className="absolute inset-0 bg-[url('https://maps.wikimedia.org/osm-intl/13/2361/3188.png')] opacity-60 bg-cover bg-center" />
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <div className="w-4 h-4 bg-rose-500 rounded-full border-2 border-white shadow-md animate-pulse" />
-                                        </div>
+                                    <div className="h-48 w-full bg-slate-100 rounded-sm overflow-hidden relative border border-slate-200">
+                                        {data.lat && data.lng ? (
+                                            <MiniMap lat={data.lat} lng={data.lng} />
+                                        ) : (
+                                            <>
+                                                <div className="absolute inset-0 bg-[url('https://maps.wikimedia.org/osm-intl/13/2361/3188.png')] opacity-60 bg-cover bg-center" />
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <div className="w-4 h-4 bg-rose-500 rounded-full border-2 border-white shadow-md animate-pulse" />
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 )}
                             </CardContent>

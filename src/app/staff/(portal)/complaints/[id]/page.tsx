@@ -3,10 +3,11 @@
 import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
     ArrowLeft, MapPin, Clock, User, Phone, Camera,
     CheckCircle2, MessageSquare, UploadCloud, Loader2,
-    SearchX, Building2, AlertTriangle, CheckCircle,
+    SearchX, Building2, AlertTriangle, CheckCircle, UserCheck,
     Hash, Zap, ThumbsUp, Calendar, ChevronRight, Eye
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -17,6 +18,11 @@ import { databases, storage, appwriteConfig, account } from "@/lib/appwrite";
 import { Query, ID, Models } from "appwrite";
 import { toast } from "sonner";
 import { getSLAStatus } from "@/lib/slas";
+
+const MiniMap = dynamic(() => import("@/components/MiniMap"), {
+    ssr: false,
+    loading: () => <div className="w-full h-full bg-slate-100 flex items-center justify-center animate-pulse text-sm text-slate-400">Loading map...</div>
+});
 
 interface Complaint {
     $id: string;
@@ -33,6 +39,9 @@ interface Complaint {
     ai_priority_score?: number;
     ai_analysis?: string;
     upvotes?: number;
+    assigned_to?: string;
+    lat?: number;
+    lng?: number;
 }
 
 interface StatusLog {
@@ -62,6 +71,8 @@ export default function ComplaintDetailView({ params }: { params: Promise<{ id: 
     const [logs, setLogs] = useState<StatusLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [assigning, setAssigning] = useState(false);
+    const [reporterVerified, setReporterVerified] = useState(false);
 
     const [newStatus, setNewStatus] = useState("");
     const [internalNotes, setInternalNotes] = useState("");
@@ -91,6 +102,21 @@ export default function ComplaintDetailView({ params }: { params: Promise<{ id: 
                 const data = compRes.documents[0] as unknown as Complaint;
                 setComplaint(data);
                 setNewStatus(data.status);
+
+                if (data.citizen_contact && data.citizen_contact !== "anonymous") {
+                    try {
+                        const profRes = await databases.listDocuments(
+                            appwriteConfig.databaseId,
+                            appwriteConfig.profilesCollectionId,
+                            [Query.equal("user_id", data.citizen_contact), Query.limit(1)]
+                        );
+                        if (profRes.documents.length > 0) {
+                            setReporterVerified((profRes.documents[0] as any).is_verified === true);
+                        }
+                    } catch (e) {
+                        // silently ignore missing profiles
+                    }
+                }
 
                 const logsRes = await databases.listDocuments(
                     appwriteConfig.databaseId,
@@ -173,6 +199,37 @@ export default function ComplaintDetailView({ params }: { params: Promise<{ id: 
         setNewStatus("escalated");
     };
 
+    const handleAssign = async () => {
+        if (!complaint || !user) return;
+        setAssigning(true);
+        try {
+            const isCurrentlyAssignedToMe = complaint.assigned_to === user.$id;
+            const targetAssignee = isCurrentlyAssignedToMe ? "" : user.$id;
+
+            const res = await fetch('/api/staff/assign', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    complaintId: complaint.$id,
+                    assignedTo: targetAssignee
+                })
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.error || "Failed to update assignment");
+            }
+
+            toast.success(isCurrentlyAssignedToMe ? "Unassigned successfully." : "Assigned to you successfully.");
+            setComplaint(prev => prev ? { ...prev, assigned_to: targetAssignee } : prev);
+        } catch (error: any) {
+            console.error("Assignment error:", error);
+            toast.error(error.message || "Failed to update assignment.");
+        } finally {
+            setAssigning(false);
+        }
+    };
+
     const formatTimeAgo = (dateString: string) => {
         const date = new Date(dateString);
         const now = new Date();
@@ -233,6 +290,15 @@ export default function ComplaintDetailView({ params }: { params: Promise<{ id: 
                 </Link>
                 <div className="flex gap-3">
                     <Button
+                        variant={complaint.assigned_to === user?.$id ? "secondary" : "outline"}
+                        onClick={handleAssign}
+                        disabled={assigning || !user || (complaint.assigned_to ? complaint.assigned_to !== user.$id : false)}
+                        className="gap-2"
+                    >
+                        {assigning ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
+                        {complaint.assigned_to === user?.$id ? "Assigned to Me" : (complaint.assigned_to ? "Assigned" : "Assign to Me")}
+                    </Button>
+                    <Button
                         variant="outline"
                         onClick={handleEscalate}
                         disabled={saving || complaint.status === 'escalated'}
@@ -278,10 +344,10 @@ export default function ComplaintDetailView({ params }: { params: Promise<{ id: 
                     <Card className="rounded-sm border-slate-200 shadow-none">
                         <CardContent className="pt-6 space-y-6">
                             {/* Metadata Grid */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pb-4 border-b border-slate-100">
                                 <div className="space-y-1">
                                     <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1"><MapPin className="w-3 h-3" /> Location</span>
-                                    <p className="text-sm font-medium text-slate-900">{complaint.address || "No address"}</p>
+                                    <p className="text-sm font-medium text-slate-900 truncate pr-2" title={complaint.address || "No address"}>{complaint.address || "No address"}</p>
                                 </div>
                                 <div className="space-y-1">
                                     <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1"><Building2 className="w-3 h-3" /> Department</span>
@@ -289,13 +355,31 @@ export default function ComplaintDetailView({ params }: { params: Promise<{ id: 
                                 </div>
                                 <div className="space-y-1">
                                     <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1"><User className="w-3 h-3" /> Reporter</span>
-                                    <p className="text-sm font-medium text-slate-900">{complaint.citizen_contact || "Anonymous"}</p>
+                                    <div className="flex items-center gap-1">
+                                        <p className="text-sm font-medium text-slate-900 truncate pr-2 max-w-[150px]" title={complaint.citizen_contact || "Anonymous"}>{complaint.citizen_contact || "Anonymous"}</p>
+                                        {reporterVerified && <UserCheck className="w-4 h-4 text-emerald-600" title="Verified Identity" />}
+                                    </div>
                                 </div>
                                 <div className="space-y-1">
                                     <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1"><ThumbsUp className="w-3 h-3" /> Upvotes</span>
                                     <p className="text-sm font-bold text-blue-600">{complaint.upvotes || 0}</p>
                                 </div>
                             </div>
+
+                            {/* Geographical Location */}
+                            {complaint.lat && complaint.lng && (
+                                <div className="space-y-2">
+                                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                                        <MapPin className="w-3 h-3" /> Geographical Location
+                                    </span>
+                                    <div className="h-[200px] w-full rounded-sm overflow-hidden border border-slate-300 shadow-inner relative">
+                                        <MiniMap lat={complaint.lat} lng={complaint.lng} />
+                                    </div>
+                                    <p className="text-xs text-slate-500 mt-1 font-mono bg-slate-50 inline-block px-2 py-1 rounded border border-slate-200">
+                                        Coordinates: {complaint.lat.toFixed(6)}, {complaint.lng.toFixed(6)}
+                                    </p>
+                                </div>
+                            )}
 
                             {/* Description */}
                             <div className="space-y-2 pt-4 border-t border-slate-100">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, ZoomControl } from "react-leaflet";
 import MapLayerSwitcher from "@/components/MapLayerSwitcher";
 import "leaflet/dist/leaflet.css";
 import { DivIcon } from "leaflet";
@@ -111,10 +111,12 @@ export default function StaffHeatmap({ complaints, flyTo }: StaffHeatmapProps) {
             <MapContainer
                 center={[20.5937, 78.9629]}
                 zoom={5}
+                zoomControl={false}
                 scrollWheelZoom={true}
                 className="absolute inset-0"
                 style={{ zIndex: 0 }}
             >
+                <ZoomControl position="bottomright" />
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

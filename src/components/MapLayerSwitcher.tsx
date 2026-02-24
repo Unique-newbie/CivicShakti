@@ -62,7 +62,7 @@ export default function MapLayerSwitcher({ position = "top-right" }: MapLayerSwi
     const posClass =
         position === "top-right"
             ? "top-3 right-3"
-            : "bottom-3 right-3";
+            : "bottom-6 right-16"; // placed to the left of the zoom controls
 
     return (
         <div className={`absolute ${posClass} z-[1000]`}>
@@ -85,8 +85,8 @@ export default function MapLayerSwitcher({ position = "top-right" }: MapLayerSwi
                                     key={key}
                                     onClick={() => handleChange(key)}
                                     className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${currentStyle === key
-                                            ? "bg-blue-50 text-blue-700 font-semibold"
-                                            : "text-slate-700 hover:bg-slate-50"
+                                        ? "bg-blue-50 text-blue-700 font-semibold"
+                                        : "text-slate-700 hover:bg-slate-50"
                                         }`}
                                 >
                                     <Icon className="w-4 h-4" />

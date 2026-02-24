@@ -59,6 +59,7 @@ export default function ComplaintList() {
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
     const [complaints, setComplaints] = useState<Complaint[]>([]);
+    const [totalComplaints, setTotalComplaints] = useState(0);
     const [loading, setLoading] = useState(true);
 
     const [currentPage, setCurrentPage] = useState(1);
@@ -75,25 +76,48 @@ export default function ComplaintList() {
 
     useEffect(() => {
         async function fetchComplaints() {
+            setLoading(true);
             try {
+                const queries = [
+                    Query.orderDesc("$createdAt"),
+                    Query.limit(itemsPerPage),
+                    Query.offset((currentPage - 1) * itemsPerPage)
+                ];
+
+                if (statusFilter) queries.push(Query.equal("status", statusFilter));
+                if (categoryFilter) queries.push(Query.equal("category", categoryFilter));
+                if (departmentFilter) queries.push(Query.equal("department", departmentFilter));
+
+                if (startDate) {
+                    queries.push(Query.greaterThanEqual("$createdAt", new Date(startDate).toISOString()));
+                }
+                if (endDate) {
+                    const end = new Date(endDate);
+                    end.setDate(end.getDate() + 1);
+                    queries.push(Query.lessThanEqual("$createdAt", end.toISOString()));
+                }
+                if (searchTerm) {
+                    queries.push(Query.search("tracking_id", searchTerm));
+                }
+
                 const response = await databases.listDocuments(
                     appwriteConfig.databaseId,
                     appwriteConfig.complaintsCollectionId,
-                    [
-                        Query.orderDesc("$createdAt"),
-                        Query.limit(500) // Fetch up to 500 for client-side pagination
-                    ]
+                    queries
                 );
+
                 setComplaints(response.documents as unknown as Complaint[]);
+                setTotalComplaints(response.total);
             } catch (error) {
                 console.error("Error fetching complaints:", error);
+                toast.error("Failed to fetch complaints. Some filters may require database indexes.");
             } finally {
                 setLoading(false);
             }
         }
 
         fetchComplaints();
-    }, []);
+    }, [currentPage, itemsPerPage, statusFilter, categoryFilter, departmentFilter, startDate, endDate, searchTerm]);
 
     const handleAutoAssign = async () => {
         const pending = complaints.filter(c => c.status === 'pending');
@@ -128,32 +152,9 @@ export default function ComplaintList() {
         setCurrentPage(1);
     }, [searchTerm, statusFilter, categoryFilter, departmentFilter, startDate, endDate]);
 
-    const filteredComplaints = complaints.filter(c => {
-        const matchesSearch = searchTerm === "" ||
-            c.tracking_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            c.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            c.address?.toLowerCase().includes(searchTerm.toLowerCase());
-
-        const matchesStatus = statusFilter === "" || c.status === statusFilter;
-        const matchesCategory = categoryFilter === "" || c.category === categoryFilter;
-        const matchesDepartment = departmentFilter === "" || c.department === departmentFilter;
-
-        let matchesDate = true;
-        if (startDate) {
-            matchesDate = matchesDate && new Date(c.$createdAt) >= new Date(startDate);
-        }
-        if (endDate) {
-            const end = new Date(endDate);
-            end.setDate(end.getDate() + 1); // Make inclusive
-            matchesDate = matchesDate && new Date(c.$createdAt) <= end;
-        }
-
-        return matchesSearch && matchesStatus && matchesCategory && matchesDepartment && matchesDate;
-    });
-
-    const totalPages = Math.ceil(filteredComplaints.length / itemsPerPage);
+    const totalPages = Math.ceil(totalComplaints / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedComplaints = filteredComplaints.slice(startIndex, startIndex + itemsPerPage);
+    const paginatedComplaints = complaints; // Already paginated from server
 
     const formatTimeAgo = (dateString: string) => {
         const date = new Date(dateString);
@@ -196,7 +197,7 @@ export default function ComplaintList() {
                 </div>
                 <div className="flex items-center gap-3">
                     <Button variant="outline" className="bg-white border-slate-200" onClick={() => {
-                        const exportData = filteredComplaints.map(c => ({
+                        const exportData = complaints.map(c => ({
                             ID: c.$id,
                             Category: c.category,
                             User: c.citizen_contact || "Anonymous",
@@ -206,7 +207,7 @@ export default function ComplaintList() {
                             Description: c.description,
                             CreatedAt: new Date(c.$createdAt).toLocaleString()
                         }));
-                        downloadCSV(exportData, `complaints_${new Date().toISOString().split('T')[0]}.csv`);
+                        downloadCSV(exportData, `complaints_page_${currentPage}_${new Date().toISOString().split('T')[0]}.csv`);
                         toast.success("CSV exported successfully");
                     }}>
                         Export CSV
@@ -354,7 +355,7 @@ export default function ComplaintList() {
                                         </div>
                                     </td>
                                 </tr>
-                            ) : filteredComplaints.length === 0 ? (
+                            ) : paginatedComplaints.length === 0 ? (
                                 <tr>
                                     <td colSpan={10} className="px-6 py-12 text-center text-slate-500">
                                         No complaints found matching your criteria.
@@ -453,7 +454,7 @@ export default function ComplaintList() {
                 {/* Pagination */}
                 <div className="flex items-center justify-between px-6 py-4 border-t border-slate-300 bg-slate-50">
                     <span className="text-sm text-slate-500">
-                        Showing {filteredComplaints.length === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredComplaints.length)} of {filteredComplaints.length} entries
+                        Showing {totalComplaints === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + itemsPerPage, totalComplaints)} of {totalComplaints} entries
                     </span>
                     <div className="flex gap-1">
                         <Button

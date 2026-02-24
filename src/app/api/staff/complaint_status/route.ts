@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Client, Databases, Query, ID } from "node-appwrite";
+import { Client, Databases, Query, ID, Users } from "node-appwrite";
+import { sendStatusUpdateEmail } from "@/lib/email";
 
 // Setup Node Appwrite Client
 const client = new Client()
@@ -8,6 +9,7 @@ const client = new Client()
     .setKey(process.env.APPWRITE_API_KEY!);
 
 const databases = new Databases(client);
+const users = new Users(client);
 
 export async function POST(req: NextRequest) {
     try {
@@ -133,6 +135,25 @@ export async function POST(req: NextRequest) {
                     console.error("Failed to update trust score:", profileErr);
                     // We don't throw here to avoid failing the status update just because scoring failed
                 }
+            }
+        }
+
+        // 5. Send Status Update Email
+        if (citizenContact && citizenContact !== "anonymous") {
+            try {
+                const userObj = await users.get(citizenContact);
+                if (userObj && userObj.email) {
+                    await sendStatusUpdateEmail(
+                        userObj.email,
+                        trackingId,
+                        newStatus,
+                        internalNotes || "",
+                        complaint.department || "General"
+                    );
+                }
+            } catch (emailErr) {
+                console.error("Failed to send status update email:", emailErr);
+                // Do not block the successful API response
             }
         }
 

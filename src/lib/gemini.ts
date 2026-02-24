@@ -92,3 +92,75 @@ export async function analyzeComplaint(
         };
     }
 }
+
+// Schema for auto-categorization
+const categorizationSchema: Schema = {
+    type: SchemaType.OBJECT,
+    properties: {
+        category: {
+            type: SchemaType.STRING,
+            description: "The most appropriate category ID for the issue.",
+            format: "enum",
+            enum: ["pothole", "garbage", "water", "electricity", "pollution", "infrastructure"]
+        }
+    },
+    required: ["category"],
+};
+
+export async function suggestCategory(
+    description: string,
+    base64Image?: string,
+    mimeType?: string
+) {
+    if (!process.env.GEMINI_API_KEY) {
+        console.warn("GEMINI_API_KEY is not configured. Skipping AI categorization.");
+        return { category: "infrastructure" }; // Default fallback
+    }
+
+    try {
+        const model = genAI.getGenerativeModel({
+            model: "gemini-1.5-flash",
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: categorizationSchema,
+                temperature: 0.1, // Low temperature for more deterministic categorization
+            },
+        });
+
+        const prompt = `
+        You are an AI assistant for the CivicShakti platform. Analyze the incoming civic issue description and/or image.
+        Your task is to select the BEST matching category ID from the allowed options.
+        
+        Allowed Categories:
+        - "pothole": Potholes, broken roads, damaged sidewalks.
+        - "garbage": Solid waste, overflowing bins, illegal dumping, dead animals.
+        - "water": Water leaks, broken pipes, open manholes, drainage issues, flooding.
+        - "electricity": Broken streetlights, hanging live wires, sparking transformers, power outages.
+        - "pollution": Air pollution, burning garbage, extreme noise pollution.
+        - "infrastructure": General infrastructure damage, falling trees, broken public benches, anything else.
+        
+        Description provided by user: ${description || "None. Rely on the provided image if any."}
+        `;
+
+        let result;
+        if (base64Image && mimeType) {
+            const imagePart = {
+                inlineData: {
+                    data: base64Image,
+                    mimeType: mimeType
+                }
+            };
+            result = await model.generateContent([prompt, imagePart]);
+        } else {
+            result = await model.generateContent(prompt);
+        }
+
+        const responseText = result.response.text();
+        const jsonResponse = JSON.parse(responseText);
+        return jsonResponse;
+
+    } catch (error) {
+        console.error("AI Categorization Error:", error);
+        return { category: "infrastructure" }; // Fallback to safe 'other' category
+    }
+}

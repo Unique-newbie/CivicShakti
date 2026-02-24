@@ -25,15 +25,10 @@ export default function ErrorsPage() {
     useEffect(() => {
         async function fetchErrors() {
             try {
-                const response = await databases.listDocuments(
-                    appwriteConfig.databaseId,
-                    appwriteConfig.errorLogsCollectionId,
-                    [
-                        Query.orderDesc("$createdAt"),
-                        Query.limit(100)
-                    ]
-                );
-                setErrors(response.documents as unknown as ErrorLog[]);
+                const res = await fetch("/api/errors");
+                if (!res.ok) throw new Error("Failed to fetch error logs");
+                const data = await res.json();
+                setErrors(data.documents as unknown as ErrorLog[]);
             } catch (error) {
                 console.error("Failed to fetch error logs:", error);
             } finally {

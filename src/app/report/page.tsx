@@ -63,6 +63,9 @@ export default function ReportClient() {
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [photoFile, setPhotoFile] = useState<File | null>(null);
 
+    // AI Detection State
+    const [isDetecting, setIsDetecting] = useState(false);
+
     // Initial Auth Check
     useEffect(() => {
         account.get().then((res) => {
@@ -81,6 +84,33 @@ export default function ReportClient() {
             setPhotoFile(file);
             const url = URL.createObjectURL(file);
             setPhotoPreview(url);
+        }
+    };
+
+    const handleAutoDetect = async () => {
+        if (!description.trim()) return;
+        setIsDetecting(true);
+        try {
+            const res = await fetch('/api/ai/categorize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ description })
+            });
+
+            if (!res.ok) throw new Error("Failed to detect category");
+
+            const data = await res.json();
+            if (data.category && CATEGORIES.some(c => c.id === data.category)) {
+                setCategory(data.category);
+                toast.success(`Category auto-detected: ${CATEGORIES.find(c => c.id === data.category)?.label}`);
+            } else {
+                toast.error("Could not confidently determine a category.");
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("AI detection failed. Please select manually.");
+        } finally {
+            setIsDetecting(false);
         }
     };
 
@@ -193,49 +223,82 @@ export default function ReportClient() {
                     <CardContent>
                         {/* STEP 1: CATEGORY */}
                         {step === 1 && (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 animate-in fade-in slide-in-from-right-4 duration-300">
-                                {CATEGORIES.map((cat) => {
-                                    const Icon = cat.icon;
-                                    const isSelected = category === cat.id;
-                                    return (
-                                        <button
-                                            key={cat.id}
-                                            onClick={() => setCategory(cat.id)}
-                                            className={`flex flex-col items-center justify-center p-6 rounded-sm border-2 transition-all ${isSelected
-                                                ? 'border-blue-600 bg-blue-50/50 scale-105 shadow-none'
-                                                : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
-                                                }`}
-                                        >
-                                            <div className={`w-12 h-12 rounded-sm ${cat.bg} ${cat.color} flex items-center justify-center mb-3`}>
-                                                <Icon className="w-6 h-6" />
+                            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                    {CATEGORIES.map((cat) => {
+                                        const Icon = cat.icon;
+                                        const isSelected = category === cat.id;
+                                        return (
+                                            <button
+                                                key={cat.id}
+                                                onClick={() => setCategory(cat.id)}
+                                                className={`flex flex-col items-center justify-center p-6 rounded-sm border-2 transition-all ${isSelected
+                                                    ? 'border-blue-600 bg-blue-50/50 scale-105 shadow-none'
+                                                    : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                                                    }`}
+                                            >
+                                                <div className={`w-12 h-12 rounded-sm ${cat.bg} ${cat.color} flex items-center justify-center mb-3`}>
+                                                    <Icon className="w-6 h-6" />
+                                                </div>
+                                                <span className="font-medium text-slate-700">{t(`category.${cat.id}`)}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="mt-8 p-5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100/50 rounded-sm relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-100 rounded-full blur-3xl opacity-50 -translate-y-1/2 translate-x-1/2"></div>
+                                    <div className="relative z-10 space-y-3">
+                                        <div className="flex items-center gap-2">
+                                            <div className="bg-blue-600 text-white p-1.5 rounded-sm">
+                                                <Zap className="w-4 h-4" />
                                             </div>
-                                            <span className="font-medium text-slate-700">{t(`category.${cat.id}`)}</span>
-                                        </button>
-                                    );
-                                })}
+                                            <h3 className="font-medium text-slate-900">Not sure which category?</h3>
+                                        </div>
+                                        <p className="text-sm text-slate-600">Describe the issue briefly and our AI will select the right category for you.</p>
+                                        <div className="flex gap-2">
+                                            <Input
+                                                placeholder="e.g., There is a huge crater in the road..."
+                                                className="bg-white border-blue-200 focus-visible:ring-blue-500"
+                                                value={description}
+                                                onChange={(e) => setDescription(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        handleAutoDetect();
+                                                    }
+                                                }}
+                                            />
+                                            <Button
+                                                onClick={handleAutoDetect}
+                                                disabled={isDetecting || !description.trim()}
+                                                className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
+                                            >
+                                                {isDetecting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Auto-Detect"}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         )}
 
                         {/* STEP 2: LOCATION */}
                         {step === 2 && (
                             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                                <div className="space-y-2">
-                                    <Label htmlFor="address">{t("report.address_label")}</Label>
-                                    <Input
-                                        id="address"
-                                        placeholder={t("report.address_placeholder")}
-                                        value={address}
-                                        onChange={(e) => setAddress(e.target.value)}
-                                        className="h-12 text-lg"
-                                    />
-                                </div>
+                                <MapPicker onLocationSelect={(newLat, newLng, addr) => { setLat(newLat); setLng(newLng); if (addr) setAddress(addr); }} />
 
-                                <div className="rounded-sm border border-slate-300 bg-slate-100 min-h-[350px] flex items-center justify-center relative overflow-hidden z-10 block">
-                                    <MapPicker onLocationSelect={(newLat, newLng, addr) => { setLat(newLat); setLng(newLng); if (addr) setAddress(addr); }} />
-                                    <div className="absolute bottom-4 right-4 z-[400] bg-white px-3 py-1.5 rounded shadow text-xs font-medium text-slate-600 pointer-events-none">
-                                        {lat && lng ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : t("report.map_pin")}
+                                {lat && lng && (
+                                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                                        <Label htmlFor="address">Selected Address (Editable)</Label>
+                                        <Input
+                                            id="address"
+                                            placeholder="Provide exact building numbers, flat details, or nearby landmarks..."
+                                            value={address}
+                                            onChange={(e) => setAddress(e.target.value)}
+                                            className="h-12 text-sm bg-white"
+                                        />
                                     </div>
-                                </div>
+                                )}
                             </div>
                         )}
 

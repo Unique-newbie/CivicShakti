@@ -93,6 +93,17 @@ export function StaffLayoutShell({
                         Heatmap
                     </Link>
                     <Link
+                        href="/staff/users"
+                        onClick={closeSidebar}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-sm transition-colors ${pathname.startsWith("/staff/users")
+                            ? "bg-blue-600/10 text-blue-400 font-medium"
+                            : "text-slate-300 hover:bg-slate-800"
+                            }`}
+                    >
+                        <UserCircle className="w-5 h-5" />
+                        Citizens
+                    </Link>
+                    <Link
                         href="/staff/errors"
                         onClick={closeSidebar}
                         className={`flex items-center gap-3 px-3 py-2.5 rounded-sm transition-colors ${pathname === "/staff/errors"

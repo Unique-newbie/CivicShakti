@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, ZoomControl } from "react-leaflet";
 import MapLayerSwitcher from "@/components/MapLayerSwitcher";
 import "leaflet/dist/leaflet.css";
 import { DivIcon } from "leaflet";
@@ -164,10 +164,12 @@ export default function PublicMap() {
             <MapContainer
                 center={[20.5937, 78.9629]}
                 zoom={5}
+                zoomControl={false}
                 scrollWheelZoom={true}
                 className="absolute inset-0 z-0"
                 style={{ zIndex: 0 }}
             >
+                <ZoomControl position="bottomright" />
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -280,40 +282,42 @@ export default function PublicMap() {
                 ))}
             </MapContainer>
 
-            {/* ── Floating Controls ──────────────────────── */}
+            {/* ── Floating Controls (Flex Container to prevent overlap) ──────────────── */}
+            <div className="absolute top-3 left-3 z-[1000] flex flex-wrap items-center gap-3">
 
-            {/* Count Badge */}
-            <div className="absolute top-3 left-3 z-[1000] bg-white/95 backdrop-blur-sm px-3 py-2 rounded-lg shadow-md border border-slate-200">
-                <span className="text-sm font-semibold text-slate-800">
-                    {complaints.length}
-                </span>
-                <span className="text-xs text-slate-500 ml-1">issues on map</span>
+                {/* Count Badge */}
+                <div className="bg-white/95 backdrop-blur-sm px-3 py-2 rounded-lg shadow-md border border-slate-200 flex items-center shrink-0">
+                    <span className="text-sm font-semibold text-slate-800">
+                        {complaints.length}
+                    </span>
+                    <span className="text-xs text-slate-500 ml-1">issues on map</span>
+                </div>
+
+                {/* Filter Toggle */}
+                <button
+                    onClick={() => setShowFilters((f) => !f)}
+                    className="flex shrink-0 items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-md text-sm font-medium text-slate-700 hover:bg-blue-50 transition-colors"
+                >
+                    <Filter className="w-4 h-4" />
+                    Filters
+                </button>
+
+                {/* Resolved Toggle */}
+                <button
+                    onClick={() => setShowResolved((r) => !r)}
+                    className={`flex shrink-0 items-center gap-1.5 px-3 py-2 border rounded-lg shadow-md text-sm font-medium transition-colors ${showResolved
+                        ? "bg-emerald-50 border-emerald-300 text-emerald-700"
+                        : "bg-white border-slate-200 text-slate-500"
+                        }`}
+                >
+                    {showResolved ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                    <span className="hidden sm:inline">Resolved</span>
+                </button>
             </div>
 
-            {/* Filter Toggle */}
-            <button
-                onClick={() => setShowFilters((f) => !f)}
-                className="absolute top-3 left-40 z-[1000] flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-md text-sm font-medium text-slate-700 hover:bg-blue-50 transition-colors"
-            >
-                <Filter className="w-4 h-4" />
-                Filters
-            </button>
-
-            {/* Resolved Toggle */}
-            <button
-                onClick={() => setShowResolved((r) => !r)}
-                className={`absolute top-3 left-[232px] z-[1000] flex items-center gap-1.5 px-3 py-2 border rounded-lg shadow-md text-sm font-medium transition-colors ${showResolved
-                    ? "bg-emerald-50 border-emerald-300 text-emerald-700"
-                    : "bg-white border-slate-200 text-slate-500"
-                    }`}
-            >
-                {showResolved ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                <span className="hidden sm:inline">Resolved</span>
-            </button>
-
-            {/* Filter Panel */}
+            {/* Filter Panel (Positioned relative to the map corner, just below the controls) */}
             {showFilters && (
-                <div className="absolute top-14 left-3 z-[1000] bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border border-slate-200 p-4 w-56 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute top-16 left-3 z-[1000] bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border border-slate-200 p-4 w-56 animate-in fade-in slide-in-from-top-2 duration-200">
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
                         Categories
                     </p>

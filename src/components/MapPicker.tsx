@@ -209,19 +209,19 @@ export default function MapPicker({ onLocationSelect, initialLat, initialLng }: 
     const defaultCenter: [number, number] = [20.5937, 78.9629]; // India center
 
     return (
-        <div className="flex flex-col h-full w-full">
-            {/* Search Bar + Detect Button */}
-            <div className="absolute top-3 left-3 right-3 z-[1000] flex gap-2" ref={searchRef}>
+        <div className="flex flex-col w-full gap-4">
+            {/* Top Bar: Search & Locate */}
+            <div className="flex flex-col sm:flex-row gap-3 w-full" ref={searchRef}>
                 <div className="relative flex-1">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                         <input
                             type="text"
-                            placeholder="Search location…"
+                            placeholder="Search location (e.g., street, landmark)..."
                             value={searchQuery}
                             onChange={(e) => handleSearchChange(e.target.value)}
                             onFocus={() => searchResults.length > 0 && setShowResults(true)}
-                            className="w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border border-slate-200 bg-white shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full pl-10 pr-4 py-3 text-base rounded-md border border-slate-300 bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                         />
                         {searching && (
                             <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500 animate-spin" />
@@ -230,12 +230,12 @@ export default function MapPicker({ onLocationSelect, initialLat, initialLng }: 
 
                     {/* Search Results Dropdown */}
                     {showResults && (
-                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                        <div className="absolute top-full left-0 right-0 mt-1 z-[2000] bg-white border border-slate-200 rounded-lg shadow-xl max-h-56 overflow-y-auto">
                             {searchResults.map((r, i) => (
                                 <button
                                     key={i}
                                     onClick={() => handleSearchSelect(r)}
-                                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-blue-50 transition-colors flex items-start gap-2 border-b border-slate-50 last:border-0"
+                                    className="w-full text-left px-4 py-3 text-sm hover:bg-blue-50 transition-colors flex items-start gap-2 border-b border-slate-50 last:border-0"
                                 >
                                     <MapPin className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
                                     <span className="text-slate-700 line-clamp-2">{r.display_name}</span>
@@ -249,50 +249,52 @@ export default function MapPicker({ onLocationSelect, initialLat, initialLng }: 
                 <button
                     onClick={handleDetectLocation}
                     disabled={detectingGPS}
-                    className="flex items-center gap-1.5 px-3 py-2.5 bg-white border border-slate-200 rounded-lg shadow-lg text-sm font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-colors disabled:opacity-60 shrink-0"
+                    className="flex items-center justify-center gap-2 px-6 py-3 bg-white border border-slate-300 rounded-md shadow-sm text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-60 shrink-0"
                     title="Detect my location"
                 >
                     {detectingGPS ? (
-                        <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                        <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
                     ) : (
-                        <Crosshair className="w-4 h-4" />
+                        <Crosshair className="w-5 h-5 text-blue-600" />
                     )}
-                    <span className="hidden sm:inline">Locate Me</span>
+                    <span>Locate Me</span>
                 </button>
             </div>
 
-            {/* Map */}
-            <MapContainer
-                center={pos || defaultCenter}
-                zoom={pos ? 15 : 5}
-                className="absolute inset-0 z-0"
-                style={{ zIndex: 0 }}
-            >
-                <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                <AutoLocate onLocate={selectLocation} trigger={detectTrigger} />
-                <FlyTo coords={flyTarget} />
-                <LocationSelector onSelect={selectLocation} currentPos={pos} />
-                <MapLayerSwitcher position="bottom-right" />
-            </MapContainer>
+            {/* Map Area */}
+            <div className="relative w-full h-[400px] rounded-md border border-slate-300 overflow-hidden bg-slate-100 shadow-inner">
+                <MapContainer
+                    center={pos || defaultCenter}
+                    zoom={pos ? 15 : 5}
+                    className="absolute inset-0 z-0"
+                    style={{ zIndex: 0 }}
+                >
+                    <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <AutoLocate onLocate={selectLocation} trigger={detectTrigger} />
+                    <FlyTo coords={flyTarget} />
+                    <LocationSelector onSelect={selectLocation} currentPos={pos} />
+                    <MapLayerSwitcher position="bottom-right" />
+                </MapContainer>
 
-            {/* Coordinates Display */}
-            <div className="absolute bottom-3 left-3 z-[1000] bg-white/95 backdrop-blur-sm px-3 py-2 rounded-lg shadow-md border border-slate-200">
-                {pos ? (
-                    <div className="flex items-center gap-2">
-                        <MapPin className="w-3.5 h-3.5 text-blue-600" />
-                        <span className="text-xs font-mono font-medium text-slate-700">
-                            {pos[0].toFixed(5)}, {pos[1].toFixed(5)}
+                {/* Coordinates Display */}
+                <div className="absolute bottom-4 left-4 z-[1000] bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded shadow-sm border border-slate-200 pointer-events-none">
+                    {pos ? (
+                        <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-blue-600" />
+                            <span className="text-xs font-medium text-slate-700">
+                                {pos[0].toFixed(5)}, {pos[1].toFixed(5)}
+                            </span>
+                        </div>
+                    ) : (
+                        <span className="text-xs text-slate-500 flex items-center gap-1.5">
+                            <MapPin className="w-4 h-4 text-slate-400" />
+                            Click map to drop pin
                         </span>
-                    </div>
-                ) : (
-                    <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5" />
-                        Click map to drop pin
-                    </span>
-                )}
+                    )}
+                </div>
             </div>
         </div>
     );

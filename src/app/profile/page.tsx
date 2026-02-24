@@ -17,10 +17,16 @@ import { Badge } from "@/components/ui/badge";
 import { ClientAuthNav } from "@/components/ClientAuthNav";
 import { BackButton } from "@/components/BackButton";
 import { toast } from "sonner";
+import { ProfileEditModal } from "@/components/ProfileEditModal";
 
 interface Profile extends Models.Document {
     user_id: string;
     trust_score: number;
+    full_name?: string;
+    phone_number?: string;
+    address?: string;
+    gov_id_url?: string;
+    is_verified?: boolean;
 }
 
 interface Complaint extends Models.Document {
@@ -194,20 +200,34 @@ export default function CitizenProfile() {
                             <User className="w-10 h-10 text-white/80" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <h1 className="text-3xl font-bold tracking-tight">{user.name || "Citizen"}</h1>
+                            <div className="flex items-center gap-3">
+                                <h1 className="text-3xl font-bold tracking-tight">{profile?.full_name || user.name || "Citizen"}</h1>
+                                <ProfileEditModal userId={user.$id} profile={profile} onUpdate={(p) => setProfile(p as unknown as Profile)} />
+                            </div>
                             <p className="text-blue-200 mt-1 flex items-center gap-2">
                                 <Mail className="w-4 h-4" /> {user.email}
                             </p>
                             <div className="flex items-center gap-3 mt-3 flex-wrap">
                                 {user.emailVerification ? (
                                     <Badge className="bg-emerald-500/20 text-emerald-200 border-emerald-400/30 hover:bg-emerald-500/30">
-                                        <BadgeCheck className="w-3.5 h-3.5 mr-1" /> Verified
+                                        <BadgeCheck className="w-3.5 h-3.5 mr-1" /> Email Verified
                                     </Badge>
                                 ) : (
                                     <Badge className="bg-amber-500/20 text-amber-200 border-amber-400/30 hover:bg-amber-500/30">
-                                        <AlertCircle className="w-3.5 h-3.5 mr-1" /> Unverified
+                                        <AlertCircle className="w-3.5 h-3.5 mr-1" /> Email Unverified
                                     </Badge>
                                 )}
+
+                                {profile?.is_verified ? (
+                                    <Badge className="bg-emerald-500 text-white border-emerald-600 shadow-sm">
+                                        <BadgeCheck className="w-3.5 h-3.5 mr-1" /> ID Verified
+                                    </Badge>
+                                ) : (
+                                    <Badge className="bg-slate-500/20 text-slate-200 border-slate-400/30">
+                                        <ShieldAlert className="w-3.5 h-3.5 mr-1" /> ID Unverified
+                                    </Badge>
+                                )}
+
                                 <Badge className={`border ${trustLevel.color}`}>
                                     <TrustIcon className="w-3.5 h-3.5 mr-1" /> {trustLevel.label}
                                 </Badge>
@@ -259,6 +279,18 @@ export default function CitizenProfile() {
                                     <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Email</span>
                                     <span className="text-sm font-medium text-slate-700">{user.emailVerification ? 'Verified' : 'Unverified'}</span>
                                 </div>
+                                {profile?.phone_number && (
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Phone</span>
+                                        <span className="text-sm font-medium text-slate-700">{profile.phone_number}</span>
+                                    </div>
+                                )}
+                                {profile?.address && (
+                                    <div className="flex flex-col gap-1 items-start">
+                                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Address</span>
+                                        <span className="text-sm font-medium text-slate-700 text-left">{profile.address}</span>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
 
