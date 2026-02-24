@@ -21,7 +21,9 @@ import {
     ShieldAlert,
     ArrowLeft
 } from "lucide-react";
+import { BackButton } from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/context/LanguageContext";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,6 +46,7 @@ const CATEGORIES = [
 
 export default function ReportClient() {
     const router = useRouter();
+    const { t } = useLanguage();
     const [step, setStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -138,11 +141,11 @@ export default function ReportClient() {
 
             const data = await response.json();
 
-            toast.success("Official report successfully submitted.");
+            toast.success(t("report.success"));
             router.push(`/track/${data.tracking_id}`);
         } catch (error: any) {
             console.error(error);
-            toast.error(error.message || "Failed to wrap up your complaint. Please try again.");
+            toast.error(error.message || t("report.error"));
             setIsSubmitting(false);
         }
     };
@@ -152,25 +155,16 @@ export default function ReportClient() {
             <div className="max-w-2xl mx-auto">
                 {/* Header Actions */}
                 <div className="mb-6 flex justify-between items-center">
-                    <Button
-                        variant="ghost"
-                        className="text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 p-2 -ml-2"
-                        onClick={() => {
-                            if (step > 1 && !confirm("Are you sure you want to cancel? All progress will be lost.")) return;
-                            router.push('/dashboard');
-                        }}
-                    >
-                        <ArrowLeft className="w-4 h-4 mr-2" /> Cancel & Return
-                    </Button>
+                    <BackButton fallbackHref="/dashboard" label="Cancel & Return" />
                 </div>
 
                 {/* Progress Bar */}
                 <div className="mb-8 relative">
                     <div className="flex justify-between mb-2">
-                        <span className="text-xs font-medium text-blue-600">Category</span>
-                        <span className={`text-xs font-medium ${step >= 2 ? 'text-blue-600' : 'text-slate-400'}`}>Location</span>
-                        <span className={`text-xs font-medium ${step >= 3 ? 'text-blue-600' : 'text-slate-400'}`}>Details</span>
-                        <span className={`text-xs font-medium ${step >= 4 ? 'text-blue-600' : 'text-slate-400'}`}>Confirm</span>
+                        <span className="text-xs font-medium text-blue-600">{t("report.step1")}</span>
+                        <span className={`text-xs font-medium ${step >= 2 ? 'text-blue-600' : 'text-slate-400'}`}>{t("report.loc")}</span>
+                        <span className={`text-xs font-medium ${step >= 3 ? 'text-blue-600' : 'text-slate-400'}`}>{t("report.step2")}</span>
+                        <span className={`text-xs font-medium ${step >= 4 ? 'text-blue-600' : 'text-slate-400'}`}>{t("report.step3")}</span>
                     </div>
                     <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
                         <div
@@ -183,16 +177,16 @@ export default function ReportClient() {
                 <Card className="rounded-sm border-slate-300 shadow-none">
                     <CardHeader>
                         <CardTitle className="text-2xl font-bold">
-                            {step === 1 && "What's the issue?"}
-                            {step === 2 && "Where is it?"}
-                            {step === 3 && "Provide Details & Evidence"}
-                            {step === 4 && "Review & Submit"}
+                            {step === 1 && t("report.header1")}
+                            {step === 2 && t("report.header2")}
+                            {step === 3 && t("report.header3")}
+                            {step === 4 && t("report.header4")}
                         </CardTitle>
                         <CardDescription>
-                            {step === 1 && "Classify the civic incident to ensure correct departmental routing."}
-                            {step === 2 && "Provide precise geographical coordinates or landmark references."}
-                            {step === 3 && "Visual evidence is optional but helps with rapid response. Detailed descriptions are mandatory for official documentation."}
-                            {step === 4 && "Review the final report details prior to formal submission."}
+                            {step === 1 && t("report.desc1")}
+                            {step === 2 && t("report.desc2")}
+                            {step === 3 && t("report.desc3")}
+                            {step === 4 && t("report.desc4")}
                         </CardDescription>
                     </CardHeader>
 
@@ -215,7 +209,7 @@ export default function ReportClient() {
                                             <div className={`w-12 h-12 rounded-sm ${cat.bg} ${cat.color} flex items-center justify-center mb-3`}>
                                                 <Icon className="w-6 h-6" />
                                             </div>
-                                            <span className="font-medium text-slate-700">{cat.label}</span>
+                                            <span className="font-medium text-slate-700">{t(`category.${cat.id}`)}</span>
                                         </button>
                                     );
                                 })}
@@ -226,10 +220,10 @@ export default function ReportClient() {
                         {step === 2 && (
                             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                                 <div className="space-y-2">
-                                    <Label htmlFor="address">Street Address / Landmark</Label>
+                                    <Label htmlFor="address">{t("report.address_label")}</Label>
                                     <Input
                                         id="address"
-                                        placeholder="e.g., Near Main Market Square"
+                                        placeholder={t("report.address_placeholder")}
                                         value={address}
                                         onChange={(e) => setAddress(e.target.value)}
                                         className="h-12 text-lg"
@@ -239,7 +233,7 @@ export default function ReportClient() {
                                 <div className="rounded-sm border border-slate-300 bg-slate-100 min-h-[350px] flex items-center justify-center relative overflow-hidden z-10 block">
                                     <MapPicker onLocationSelect={(newLat, newLng, addr) => { setLat(newLat); setLng(newLng); if (addr) setAddress(addr); }} />
                                     <div className="absolute bottom-4 right-4 z-[400] bg-white px-3 py-1.5 rounded shadow text-xs font-medium text-slate-600 pointer-events-none">
-                                        {lat && lng ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : 'Click map to drop pin'}
+                                        {lat && lng ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : t("report.map_pin")}
                                     </div>
                                 </div>
                             </div>
@@ -249,7 +243,7 @@ export default function ReportClient() {
                         {step === 3 && (
                             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                                 <div className="space-y-2">
-                                    <Label className="flex items-center gap-1">Provide visual proof <span className="text-slate-400 text-xs italic font-normal ml-2">(Optional)</span></Label>
+                                    <Label className="flex items-center gap-1">{t("report.visual_proof")} <span className="text-slate-400 text-xs italic font-normal ml-2">{t("report.visual_proof_opt")}</span></Label>
                                     <label className={`flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-sm cursor-pointer transition-colors ${photoPreview ? 'border-blue-400 bg-blue-50' : 'border-slate-300 bg-slate-50 hover:bg-slate-100 hover:border-slate-400'}`}>
                                         {photoPreview ? (
                                             // eslint-disable-next-line @next/next/no-img-element
@@ -257,8 +251,8 @@ export default function ReportClient() {
                                         ) : (
                                             <div className="flex flex-col items-center justify-center pt-5 pb-6 text-slate-500">
                                                 <Camera className="w-10 h-10 mb-3 text-slate-400" />
-                                                <p className="mb-2 text-sm font-semibold">Click to take photo</p>
-                                                <p className="text-xs">or drag and drop here</p>
+                                                <p className="mb-2 text-sm font-semibold">{t("report.take_photo")}</p>
+                                                <p className="text-xs">{t("report.drag_drop")}</p>
                                             </div>
                                         )}
                                         <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
@@ -266,10 +260,10 @@ export default function ReportClient() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="desc" className="flex items-center gap-1">Additional Description <span className="text-rose-500">*</span></Label>
+                                    <Label htmlFor="desc" className="flex items-center gap-1">{t("report.additional_desc")} <span className="text-rose-500">*</span></Label>
                                     <Textarea
                                         id="desc"
-                                        placeholder="Describe the issue in detail (mandatory)..."
+                                        placeholder={t("report.desc_placeholder_detail")}
                                         className="min-h-[120px]"
                                         value={description}
                                         onChange={(e) => setDescription(e.target.value)}
@@ -354,7 +348,7 @@ export default function ReportClient() {
                         )}
                     </CardFooter>
                 </Card>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }

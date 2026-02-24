@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ClientAuthNav } from "@/components/ClientAuthNav";
+import { BackButton } from "@/components/BackButton";
 import { toast } from "sonner";
 
 interface Profile extends Models.Document {

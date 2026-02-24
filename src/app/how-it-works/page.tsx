@@ -1,6 +1,8 @@
 import { PublicHeader } from "@/components/PublicHeader";
 import { Footer } from "@/components/Footer";
 import { Camera, MapPin, CheckCircle, RefreshCw, BarChart } from "lucide-react";
+import { BackButton } from "@/components/BackButton";
+import { Translate } from "@/components/Translate";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -13,11 +15,15 @@ export default function HowItWorksPage() {
         <div className="flex flex-col min-h-screen bg-slate-50">
             <PublicHeader />
 
-            <main className="flex-1 w-full max-w-4xl mx-auto px-6 py-16 md:py-24">
+            <main className="flex-1 w-full max-w-4xl mx-auto px-6 py-16 md:py-24 relative">
+                <div className="absolute top-8 left-6 md:left-0 z-10 w-full max-w-4xl mx-auto flex">
+                    <BackButton fallbackHref="/" label="Home" />
+                </div>
+
                 <div className="space-y-4 mb-16 text-center">
-                    <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight">How It Works</h1>
+                    <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight"><Translate tKey="howItWorks.title" /></h1>
                     <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                        A transparent, three-step process to ensure civic issues are logged, assigned, and resolved efficiently.
+                        <Translate tKey="howItWorks.subtitle" />
                     </p>
                 </div>
 
@@ -33,9 +39,9 @@ export default function HowItWorksPage() {
                                 <Camera className="w-6 h-6" />
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-slate-900 mb-2">Submit a Report</h3>
+                                <h3 className="text-xl font-bold text-slate-900 mb-2"><Translate tKey="howItWorks.step1Title" /></h3>
                                 <p className="text-slate-600 leading-relaxed">
-                                    Start by taking a clear photo of the issue (e.g., a pothole or broken streetlight). Select the correct category, add a brief description, and drop a pin on the map to log the exact coordinates. Our AI triages your report before it is submitted.
+                                    <Translate tKey="howItWorks.step1Desc" />
                                 </p>
                             </div>
                         </div>
@@ -51,9 +57,9 @@ export default function HowItWorksPage() {
                                 <RefreshCw className="w-6 h-6" />
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-slate-900 mb-2">Review & Assignment</h3>
+                                <h3 className="text-xl font-bold text-slate-900 mb-2"><Translate tKey="howItWorks.step2Title" /></h3>
                                 <p className="text-slate-600 leading-relaxed">
-                                    Once submitted, you receive a unique Tracking ID. The report is automatically routed to the relevant municipal department based on the category and location. You can monitor the timeline status changing from "Submitted" to "In Progress".
+                                    <Translate tKey="howItWorks.step2Desc" />
                                 </p>
                             </div>
                         </div>
@@ -69,9 +75,9 @@ export default function HowItWorksPage() {
                                 <CheckCircle className="w-6 h-6" />
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-slate-900 mb-2">Proof of Resolution</h3>
+                                <h3 className="text-xl font-bold text-slate-900 mb-2"><Translate tKey="howItWorks.step3Title" /></h3>
                                 <p className="text-slate-600 leading-relaxed">
-                                    When the issue is fixed, municipal staff are required to upload a photographic evidence of the resolved site. Only then is the complaint marked as "Resolved" on your dashboard and on the public map.
+                                    <Translate tKey="howItWorks.step3Desc" />
                                 </p>
                             </div>
                         </div>
@@ -85,9 +91,9 @@ export default function HowItWorksPage() {
                         <BarChart className="w-12 h-12 text-blue-400" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-bold mb-3">Community Trust Building</h2>
+                        <h2 className="text-2xl font-bold mb-3"><Translate tKey="howItWorks.trustTitle" /></h2>
                         <p className="text-slate-300 leading-relaxed">
-                            Every resolved complaint increases your "Trust Score" as a reporting citizen, ensuring that highly engaged and accurate reporters have their future complaints prioritized in the triage queue.
+                            <Translate tKey="howItWorks.trustDesc" />
                         </p>
                     </div>
                 </div>

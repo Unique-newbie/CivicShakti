@@ -10,7 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Footer } from "@/components/Footer";
+import { useLanguage } from "@/context/LanguageContext";
+import { PublicHeader } from "@/components/PublicHeader";
+
 
 export default function Login() {
     return (
@@ -27,6 +29,7 @@ export default function Login() {
 function LoginContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { t } = useLanguage();
     const redirectPath = searchParams.get("redirect") || "/dashboard";
     const [isLogin, setIsLogin] = useState(true);
     const [name, setName] = useState("");
@@ -65,7 +68,7 @@ function LoginContent() {
                 window.location.href = redirectPath;
             } else {
                 console.error("Auth error:", err);
-                setError(err.message || "Authentication failed. Please check your credentials.");
+                setError(err.message || t("login.authFailed"));
             }
         } finally {
             setIsLoading(false);
@@ -74,6 +77,7 @@ function LoginContent() {
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col relative overflow-hidden">
+            <PublicHeader />
             <div className="flex-1 flex flex-col items-center justify-center p-4 z-10 w-full">
                 <div className="mb-8 flex items-center gap-2 text-blue-700 font-bold text-2xl tracking-tight">
                     <ShieldAlert className="w-8 h-8" />
@@ -82,9 +86,9 @@ function LoginContent() {
 
                 <Card className="w-full max-w-md shadow-xl shadow-slate-200/50 border-slate-100">
                     <CardHeader className="space-y-2 text-center">
-                        <CardTitle className="text-2xl font-bold">{isLogin ? "Welcome Back" : "Create Account"}</CardTitle>
+                        <CardTitle className="text-2xl font-bold">{isLogin ? t("login.welcomeBack") : t("login.createAccount")}</CardTitle>
                         <CardDescription>
-                            {isLogin ? "Log in to track your complaints faster." : "Sign up to start reporting issues in your city."}
+                            {isLogin ? t("login.loginDesc") : t("login.signupDesc")}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -97,7 +101,7 @@ function LoginContent() {
 
                             {!isLogin && (
                                 <div className="space-y-2">
-                                    <Label htmlFor="name">Full Name</Label>
+                                    <Label htmlFor="name">{t("common.fullName")}</Label>
                                     <div className="relative">
                                         <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                         <Input
@@ -114,7 +118,7 @@ function LoginContent() {
                             )}
 
                             <div className="space-y-2">
-                                <Label htmlFor="email">Email Address</Label>
+                                <Label htmlFor="email">{t("common.email")}</Label>
                                 <div className="relative">
                                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                     <Input
@@ -131,7 +135,7 @@ function LoginContent() {
 
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
-                                    <Label htmlFor="password">Password</Label>
+                                    <Label htmlFor="password">{t("common.password")}</Label>
                                 </div>
                                 <div className="relative">
                                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -148,7 +152,7 @@ function LoginContent() {
                             </div>
 
                             <Button type="submit" className="w-full h-12 bg-blue-700 hover:bg-blue-800 text-lg shadow-md" disabled={isLoading}>
-                                {isLoading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : (isLogin ? "Log In" : "Sign Up")}
+                                {isLoading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : (isLogin ? t("common.login") : t("common.signup"))}
                             </Button>
                         </form>
                     </CardContent>
@@ -161,13 +165,12 @@ function LoginContent() {
                             className="hover:text-blue-600 font-medium transition-colors"
                             type="button"
                         >
-                            {isLogin ? "Don't have an account? Sign up" : "Already have an account? Log in"}
+                            {isLogin ? t("common.noAccount") : t("common.hasAccount")}
                         </button>
                     </CardFooter>
                 </Card>
             </div>
 
-            <Footer />
-        </div >
+        </div>
     );
 }

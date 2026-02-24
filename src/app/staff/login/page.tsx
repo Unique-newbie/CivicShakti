@@ -11,7 +11,7 @@ import { account } from "@/lib/appwrite";
 import { syncSessionCookie } from "@/lib/auth-helpers";
 
 import { PublicHeader } from "@/components/PublicHeader";
-import { Footer } from "@/components/Footer";
+
 import { Suspense } from "react";
 
 function StaffLoginContent() {
@@ -128,7 +128,7 @@ function StaffLoginContent() {
                 </Card>
             </main>
 
-            <Footer />
+
         </div>
     );
 }

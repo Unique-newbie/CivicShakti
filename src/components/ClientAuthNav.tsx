@@ -8,9 +8,11 @@ import { account } from "@/lib/appwrite";
 import { clearSessionCookie } from "@/lib/auth-helpers";
 import { Models } from "appwrite";
 import { LogOut, User, LayoutDashboard } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 export function ClientAuthNav() {
     const router = useRouter();
+    const { t } = useLanguage();
     const [user, setUser] = useState<Models.User<Models.Preferences> | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -48,7 +50,7 @@ export function ClientAuthNav() {
             <div className="flex items-center gap-3">
                 <Link href="/dashboard" className="hidden sm:flex items-center gap-2 text-sm text-slate-700 font-medium hover:text-blue-600 transition-colors">
                     <LayoutDashboard className="w-4 h-4" />
-                    Dashboard
+                    {t("nav.dashboard")}
                 </Link>
                 <Link href="/profile" className="hidden sm:flex items-center gap-2 text-sm text-slate-700 font-medium hover:text-blue-600 transition-colors">
                     <User className="w-4 h-4" />
@@ -56,12 +58,12 @@ export function ClientAuthNav() {
                 </Link>
                 <Button variant="outline" size="sm" onClick={handleLogout} className="text-slate-600 gap-2 border-slate-200 hover:bg-slate-100">
                     <LogOut className="w-4 h-4" />
-                    Sign Out
+                    {t("nav.signOut")}
                 </Button>
                 <div className="h-6 w-px bg-slate-200"></div>
                 <Link href="/staff/dashboard">
                     <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-800">
-                        Authority Portal
+                        {t("nav.authorityPortal")}
                     </Button>
                 </Link>
             </div>
@@ -72,12 +74,12 @@ export function ClientAuthNav() {
         <div className="flex items-center gap-2">
             <Link href="/login">
                 <Button variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50 font-medium">
-                    Citizen Login
+                    {t("nav.citizenLogin")}
                 </Button>
             </Link>
             <Link href="/staff/login">
                 <Button variant="ghost" className="text-slate-600 font-medium">
-                    Authority Portal
+                    {t("nav.authorityPortal")}
                 </Button>
             </Link>
         </div>

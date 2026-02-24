@@ -1,5 +1,6 @@
 import { PublicHeader } from "@/components/PublicHeader";
 import { Footer } from "@/components/Footer";
+import { BackButton } from "@/components/BackButton";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -12,7 +13,11 @@ export default function PrivacyPolicyPage() {
         <div className="flex flex-col min-h-screen bg-slate-50">
             <PublicHeader />
 
-            <main className="flex-1 w-full max-w-4xl mx-auto px-6 py-16 md:py-24">
+            <main className="flex-1 w-full max-w-4xl mx-auto px-6 py-16 md:py-24 relative">
+                <div className="absolute top-8 left-6 md:left-0 z-10 w-full max-w-4xl mx-auto flex">
+                    <BackButton fallbackHref="/" label="Home" />
+                </div>
+
                 <div className="space-y-4 mb-16 text-center">
                     <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight">Privacy Policy</h1>
                     <p className="text-lg text-slate-600 max-w-2xl mx-auto">

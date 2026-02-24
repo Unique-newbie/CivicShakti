@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { ShieldAlert, Info } from 'lucide-react';
 import { ClientAuthNav } from '@/components/ClientAuthNav';
+import { useLanguage } from '@/context/LanguageContext';
 
 // Dynamically import the map to disable SSR
 const PublicMap = dynamic(() => import('@/components/PublicMap'), {
@@ -15,6 +16,8 @@ const PublicMap = dynamic(() => import('@/components/PublicMap'), {
 });
 
 export default function ExplorePage() {
+    const { t } = useLanguage();
+
     return (
         <div className="flex flex-col min-h-screen bg-slate-50">
             {/* Header */}
@@ -34,14 +37,14 @@ export default function ExplorePage() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full flex-1 flex flex-col">
                     <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
                         <div>
-                            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Neighborhood Watch Map</h1>
+                            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t("explore.title")}</h1>
                             <p className="text-slate-600 mt-2 max-w-2xl text-lg">
-                                See what's already been reported in your area. This helps prevent duplicate reports and keeps our community informed about ongoing fixes.
+                                {t("explore.subtitle")}
                             </p>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-blue-800 bg-blue-50 px-4 py-2 rounded-sm border border-blue-200 shrink-0">
                             <Info className="w-4 h-4" />
-                            <span>Resolved issues are hidden from this view.</span>
+                            <span>{t("explore.info")}</span>
                         </div>
                     </div>
 
