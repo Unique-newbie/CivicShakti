@@ -123,6 +123,7 @@ export default function TrackDetail({ params }: { params: Promise<{ id: string }
     const [feedbackText, setFeedbackText] = useState("");
     const [hoverRating, setHoverRating] = useState<number>(0);
     const [submittingFeedback, setSubmittingFeedback] = useState(false);
+    const [withdrawing, setWithdrawing] = useState(false);
 
     useEffect(() => {
         async function fetchComplaint() {
@@ -132,6 +133,7 @@ export default function TrackDetail({ params }: { params: Promise<{ id: string }
                     appwriteConfig.complaintsCollectionId,
                     [Query.equal("tracking_id", trackingId), Query.limit(1)]
                 );
+
 
                 if (complaintRes.documents.length === 0) {
                     setError("Complaint not found. Please check the tracking ID.");
@@ -214,6 +216,46 @@ export default function TrackDetail({ params }: { params: Promise<{ id: string }
         }
     };
 
+    const handleWithdraw = async () => {
+        if (!confirm("Are you sure you want to withdraw this complaint? This cannot be undone.")) return;
+
+        setWithdrawing(true);
+        try {
+            const res = await fetch("/api/citizen/withdraw", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    complaintId: data?.$id,
+                    trackingId: trackingId
+                })
+            });
+
+            if (!res.ok) throw new Error("Failed to withdraw complaint");
+
+            toast.success("Complaint withdrawn successfully.");
+
+            // Optimistically update the local state without full reload
+            if (data) {
+                const newLogs = [...data.logs, {
+                    $id: Date.now().toString(),
+                    complaint_id: trackingId,
+                    status_from: 'pending',
+                    status_to: 'resolved',
+                    remarks: 'Complaint withdrawn by citizen.',
+                    changed_by_staff_id: 'citizen',
+                    $createdAt: new Date().toISOString()
+                } as unknown as StatusLog];
+
+                setData({ ...data, status: 'resolved', logs: newLogs });
+            }
+        } catch (error) {
+            toast.error("An error occurred while withdrawing.");
+            console.error(error);
+        } finally {
+            setWithdrawing(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-3">
@@ -255,6 +297,18 @@ export default function TrackDetail({ params }: { params: Promise<{ id: string }
                         <ArrowLeft className="w-4 h-4" /> Back to Tracking
                     </Link>
                     <div className="flex items-center gap-2">
+                        {data.status === 'pending' && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleWithdraw}
+                                disabled={withdrawing}
+                                className="border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 mr-2"
+                            >
+                                {withdrawing ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : null}
+                                Withdraw
+                            </Button>
+                        )}
                         <button
                             onClick={copyTrackingId}
                             className="flex items-center gap-2 px-3 py-1.5 text-sm font-mono font-bold text-slate-900 bg-slate-100 rounded-sm hover:bg-slate-200 transition-colors border border-slate-200"
@@ -357,13 +411,13 @@ export default function TrackDetail({ params }: { params: Promise<{ id: string }
                                 </div>
 
                                 {/* Log Entries */}
-                                {data.logs.length > 0 && (
+                                {data.logs.filter(log => log.status_from !== log.status_to || log.changed_by_staff_id === 'citizen').length > 0 && (
                                     <div className="border-t border-slate-100 pt-5">
                                         <h4 className="text-sm font-semibold text-slate-700 mb-4">Activity Log</h4>
                                         <div className="relative">
                                             <div className="absolute left-[11px] top-3 bottom-3 w-0.5 bg-slate-100" />
                                             <div className="space-y-4">
-                                                {data.logs.map((log) => {
+                                                {data.logs.filter(log => log.status_from !== log.status_to || log.changed_by_staff_id === 'citizen').map((log) => {
                                                     const toConfig = STATUS_CONFIG[log.status_to] || STATUS_CONFIG.pending;
                                                     const ToIcon = toConfig.icon;
                                                     return (
@@ -380,7 +434,7 @@ export default function TrackDetail({ params }: { params: Promise<{ id: string }
                                                                         {formatDateTime(log.$createdAt)}
                                                                     </span>
                                                                 </div>
-                                                                {log.remarks && (
+                                                                {log.remarks && log.changed_by_staff_id === 'citizen' && (
                                                                     <div className="mt-1.5 p-2.5 bg-slate-50 rounded-sm border border-slate-100 text-sm text-slate-600">
                                                                         {log.remarks}
                                                                     </div>
@@ -394,7 +448,7 @@ export default function TrackDetail({ params }: { params: Promise<{ id: string }
                                     </div>
                                 )}
 
-                                {data.logs.length === 0 && (
+                                {data.logs.filter(log => log.status_from !== log.status_to || log.changed_by_staff_id === 'citizen').length === 0 && (
                                     <div className="text-center py-6 text-sm text-slate-400">
                                         No status updates yet. The complaint is awaiting initial triage.
                                     </div>

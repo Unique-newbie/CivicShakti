@@ -357,7 +357,7 @@ export default function ComplaintDetailView({ params }: { params: Promise<{ id: 
                                     <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1"><User className="w-3 h-3" /> Reporter</span>
                                     <div className="flex items-center gap-1">
                                         <p className="text-sm font-medium text-slate-900 truncate pr-2 max-w-[150px]" title={complaint.citizen_contact || "Anonymous"}>{complaint.citizen_contact || "Anonymous"}</p>
-                                        {reporterVerified && <UserCheck className="w-4 h-4 text-emerald-600" title="Verified Identity" />}
+                                        {reporterVerified && <span title="Verified Identity"><UserCheck className="w-4 h-4 text-emerald-600" /></span>}
                                     </div>
                                 </div>
                                 <div className="space-y-1">
@@ -599,14 +599,18 @@ export default function ComplaintDetailView({ params }: { params: Promise<{ id: 
                                     {logs.map((log) => {
                                         const toConfig = STATUS_CONFIG[log.status_to] || STATUS_CONFIG.pending;
                                         const ToIcon = toConfig.icon;
+                                        const isInternalNote = log.status_from === log.status_to;
+
                                         return (
                                             <div key={log.$id} className="flex gap-4 relative z-10">
-                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${toConfig.bg} border`}>
-                                                    <ToIcon className="w-3 h-3" />
+                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${isInternalNote ? 'bg-slate-100 text-slate-500' : toConfig.bg} border`}>
+                                                    {isInternalNote ? <MessageSquare className="w-3 h-3" /> : <ToIcon className="w-3 h-3" />}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="text-sm font-semibold text-slate-900">{toConfig.label}</span>
+                                                        <span className="text-sm font-semibold text-slate-900">
+                                                            {isInternalNote ? "Internal Note Added" : `Status changed to ${toConfig.label}`}
+                                                        </span>
                                                         <span className="text-xs text-slate-400">{formatDate(log.$createdAt)} at {formatTime(log.$createdAt)}</span>
                                                     </div>
                                                     {log.remarks && (

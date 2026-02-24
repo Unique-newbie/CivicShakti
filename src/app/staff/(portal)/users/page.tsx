@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { models, Query } from "appwrite";
+import { Models, Query } from "appwrite";
 import { databases, appwriteConfig, storage } from "@/lib/appwrite";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { UserCircle, BadgeCheck, ShieldAlert, FileText, ExternalLink, Loader2 } from "lucide-react";
 
-interface Profile extends models.Document {
+interface Profile extends Models.Document {
     user_id: string;
     trust_score: number;
     full_name?: string;
@@ -66,7 +66,7 @@ export default function UsersPage() {
     };
 
     const getFileUrl = (fileId: string) => {
-        return storage.getFileView(appwriteConfig.storageId, fileId).href;
+        return storage.getFileView(appwriteConfig.storageId, fileId).toString();
     };
 
     if (isLoading) {
