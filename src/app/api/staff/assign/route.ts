@@ -13,15 +13,21 @@ export async function POST(req: NextRequest) {
     try {
         // Enforce strict Server-Side Auth Check for Staff Actions
         try {
-            const { createSessionClient } = await import("@/lib/server-appwrite");
-            const { account } = await createSessionClient();
+            const authHeader = req.headers.get('authorization');
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                throw new Error("missing_jwt");
+            }
+            const jwt = authHeader.split(' ')[1];
+
+            const { createJWTClient } = await import("@/lib/server-appwrite");
+            const { account } = createJWTClient(jwt);
             const user = await account.get();
             // Validate official staff domain
             if (!user.email.endsWith("@civicshakti.gov") && !user.email.endsWith("@civicshakti.com")) {
                 throw new Error("unauthorized_domain");
             }
         } catch (error) {
-            console.warn("[Auth] Unauthorized staff action attempt blocked.");
+            console.warn("[Auth] Unauthorized staff action attempt blocked.", error);
             return NextResponse.json({ error: "Unauthorized. Official staff account required." }, { status: 401 });
         }
 

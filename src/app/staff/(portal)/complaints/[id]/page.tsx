@@ -18,6 +18,7 @@ import { databases, storage, appwriteConfig, account } from "@/lib/appwrite";
 import { Query, ID, Models } from "appwrite";
 import { toast } from "sonner";
 import { getSLAStatus } from "@/lib/slas";
+import { getAuthJWT } from "@/lib/auth-helpers";
 
 const MiniMap = dynamic(() => import("@/components/MiniMap"), {
     ssr: false,
@@ -166,9 +167,13 @@ export default function ComplaintDetailView({ params }: { params: Promise<{ id: 
                 resImageUrl = `${appwriteConfig.endpoint}/storage/buckets/${appwriteConfig.storageId}/files/${uploadedFile.$id}/view?project=${appwriteConfig.projectId}`;
             }
 
+            const jwt = await getAuthJWT();
             const response = await fetch('/api/staff/complaint_status', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${jwt}`
+                },
                 body: JSON.stringify({
                     complaintId: complaint.$id,
                     trackingId: complaint.tracking_id,
@@ -206,9 +211,13 @@ export default function ComplaintDetailView({ params }: { params: Promise<{ id: 
             const isCurrentlyAssignedToMe = complaint.assigned_to === user.$id;
             const targetAssignee = isCurrentlyAssignedToMe ? "" : user.$id;
 
+            const jwt = await getAuthJWT();
             const res = await fetch('/api/staff/assign', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${jwt}`
+                },
                 body: JSON.stringify({
                     complaintId: complaint.$id,
                     assignedTo: targetAssignee
