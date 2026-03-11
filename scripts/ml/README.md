@@ -25,20 +25,25 @@ This creates an isolated `ml_env` virtual environment and installs TensorFlow + 
 ### 2. Organize Your Dataset
 
 ```
-scripts/ml/
-  └─ dataset/
-      ├─ pothole/         ← put pothole photos here
-      ├─ garbage/         ← put garbage photos here
-      ├─ water_logging/   ← put water issue photos here
-      ├─ power_issue/     ← put electrical issue photos here
-      ├─ pollution/       ← put pollution photos here
-      ├─ infrastructure/  ← put infrastructure damage photos here
-      └─ normal/          ← put CLEAN road/park/area photos here
+scripts/ml/dataset/
+  ├─ pothole/              ← pothole/damaged road photos
+  ├─ pothole_normal/       ← CLEAN, smooth road photos
+  ├─ garbage/              ← garbage/waste photos
+  ├─ garbage_normal/       ← CLEAN area (no litter) photos
+  ├─ water_logging/        ← waterlogging/drainage issue photos
+  ├─ water_normal/         ← normal drainage/dry road photos
+  ├─ power_issue/          ← electrical issue photos
+  ├─ electricity_normal/   ← working street lights/poles photos
+  ├─ pollution/            ← pollution photos
+  ├─ pollution_normal/     ← clear sky/clean environment photos
+  ├─ infrastructure/       ← damaged infrastructure photos
+  ├─ infrastructure_normal/← well-maintained benches/fences photos
+  └─ normal/               ← general clean areas (optional extra)
 ```
 
 > **Tip:** Aim for at least 20–30 images per category. More images = better accuracy.
 
-> **⚠️ Important:** The `normal` folder is **critical** for accuracy! Without it, the model will classify every image as an issue. Add 20-30 photos of clean roads, well-maintained parks, and normal public areas to teach the model the difference.
+> **⚠️ Important:** The `_normal` folders are **critical** for accuracy! Without them, the model will classify every image as an issue. Each `_normal` folder should contain photos of the SAME type of scene but in GOOD condition (e.g., `pothole_normal` = smooth clean roads).
 
 ### 3. Train
 
