@@ -32,10 +32,13 @@ scripts/ml/
       ├─ water_logging/   ← put water issue photos here
       ├─ power_issue/     ← put electrical issue photos here
       ├─ pollution/       ← put pollution photos here
-      └─ infrastructure/  ← put infrastructure damage photos here
+      ├─ infrastructure/  ← put infrastructure damage photos here
+      └─ normal/          ← put CLEAN road/park/area photos here
 ```
 
 > **Tip:** Aim for at least 20–30 images per category. More images = better accuracy.
+
+> **⚠️ Important:** The `normal` folder is **critical** for accuracy! Without it, the model will classify every image as an issue. Add 20-30 photos of clean roads, well-maintained parks, and normal public areas to teach the model the difference.
 
 ### 3. Train
 
