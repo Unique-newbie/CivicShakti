@@ -30,6 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { DetectionOverlay } from "@/components/DetectionOverlay";
 
 // JWT-based auth
 import { toast } from "sonner";
@@ -592,9 +593,25 @@ export default function ReportClient() {
                                         </div>
                                     ) : photoPreview ? (
                                         <div className="relative rounded-sm overflow-hidden border-2 border-emerald-400 bg-slate-100">
-                                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                                            <img src={photoPreview} alt="Preview" className="w-full h-64 object-cover" />
-                                            <div className="absolute top-2 right-2 flex gap-2">
+                                            {/* Show AI detection overlay if analysis has bounding boxes */}
+                                            {aiAnalysis?.analysis_details?.objects?.length > 0 ? (
+                                                <DetectionOverlay
+                                                    imageSrc={photoPreview}
+                                                    detections={aiAnalysis.analysis_details.objects}
+                                                    category={aiAnalysis.detected_issue?.category}
+                                                    severity={aiAnalysis.severity?.score}
+                                                    confidence={aiAnalysis.quality?.confidence}
+                                                    aspectClass="h-72"
+                                                    alt="Uploaded evidence with AI detection"
+                                                    showLegend={true}
+                                                />
+                                            ) : (
+                                                <>
+                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                    <img src={photoPreview} alt="Preview" className="w-full h-64 object-cover" />
+                                                </>
+                                            )}
+                                            <div className="absolute top-2 right-2 flex gap-2 z-30">
                                                 <Button
                                                     onClick={clearPhoto}
                                                     variant="outline"
@@ -604,11 +621,13 @@ export default function ReportClient() {
                                                     Remove
                                                 </Button>
                                             </div>
-                                            <div className="absolute bottom-2 left-2">
-                                                <Badge className="bg-emerald-500 text-white border-0 shadow-md">
-                                                    <CheckCircle2 className="w-3 h-3 mr-1" /> Photo Ready
-                                                </Badge>
-                                            </div>
+                                            {!aiAnalysis?.analysis_details?.objects?.length && (
+                                                <div className="absolute bottom-2 left-2">
+                                                    <Badge className="bg-emerald-500 text-white border-0 shadow-md">
+                                                        <CheckCircle2 className="w-3 h-3 mr-1" /> Photo Ready
+                                                    </Badge>
+                                                </div>
+                                            )}
                                         </div>
                                     ) : (
                                         <div className="grid grid-cols-2 gap-3">

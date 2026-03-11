@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import { DetectionOverlay } from "@/components/DetectionOverlay";
 
 const MiniMap = dynamic(() => import("@/components/MiniMap"), { ssr: false });
 
@@ -66,6 +67,16 @@ interface StatusLog {
     createdAt: string;
 }
 
+// Proxy Appwrite storage URLs through our API to avoid CORS/auth issues
+function proxyImageUrl(url: string | null): string | null {
+    if (!url) return null;
+    // Only proxy Appwrite storage URLs, not data URIs or external URLs
+    if (url.includes('/storage/buckets/') || url.includes('cloud.appwrite.io')) {
+        return `/api/image-proxy?url=${encodeURIComponent(url)}`;
+    }
+    return url;
+}
+
 // Map Appwrite document fields to our component interface
 function mapComplaint(doc: any): Complaint {
     return {
@@ -75,7 +86,7 @@ function mapComplaint(doc: any): Complaint {
         description: doc.description || '',
         address: doc.address || '',
         status: doc.status || 'pending',
-        imageUrl: doc.imageUrl || doc.image_url || null,
+        imageUrl: proxyImageUrl(doc.imageUrl || doc.image_url || null),
         department: doc.department || '',
         aiSeverity: doc.aiSeverity || doc.ai_severity || '',
         notes: doc.notes || doc.staff_notes || '',
@@ -568,10 +579,14 @@ export default function TrackDetail({ params }: { params: Promise<{ id: string }
                             </CardHeader>
                             <CardContent>
                                 {data.imageUrl ? (
-                                    <div className="aspect-video bg-slate-100 rounded-sm border border-slate-200 overflow-hidden relative">
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img src={data.imageUrl} alt="Evidence photo" className="absolute inset-0 w-full h-full object-cover" />
-                                    </div>
+                                    <DetectionOverlay
+                                        imageSrc={data.imageUrl}
+                                        detections={[]}  
+                                        category={data.category}
+                                        severity={data.aiSeverity ? Number(data.aiSeverity) : undefined}
+                                        alt="Evidence photo"
+                                        showLegend={false}
+                                    />
                                 ) : (
                                     <div className="aspect-video bg-slate-100 rounded-sm border border-slate-200 border-dashed flex flex-col items-center justify-center text-slate-400">
                                         <ImageIcon className="w-8 h-8 mb-2 opacity-50" />

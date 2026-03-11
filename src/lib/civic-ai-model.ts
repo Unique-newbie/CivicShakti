@@ -261,6 +261,30 @@ const CATEGORY_PROFILES: CategoryProfile[] = [
         base_severity: [20, 50],
         description_template: 'Public infrastructure damage detected. The affected structure requires maintenance by the municipal maintenance division.',
     },
+    {
+        id: 'normal',
+        label: 'Normal / No Issue Detected',
+        object_signals: {
+            'person': 0.3, 'car': 0.25, 'bicycle': 0.2, 'motorcycle': 0.2,
+            'dog': 0.15, 'cat': 0.15, 'potted plant': 0.2, 'bench': 0.15,
+        },
+        mobilenet_signals: {
+            'street': 0.5, 'road': 0.4, 'sidewalk': 0.5, 'park': 0.5,
+            'garden': 0.5, 'lawn': 0.5, 'building': 0.3, 'house': 0.3,
+            'tree': 0.4, 'flower': 0.4, 'sky': 0.3, 'cloud': 0.2,
+            'pavement': 0.4, 'plaza': 0.4, 'courtyard': 0.4,
+        },
+        color_signals: { vegetation_green: 0.5, road_gray: 0.3 },
+        texture_signals: { high_roughness: -0.5, low_uniformity: -0.5 },
+        sub_types: [
+            { condition: 'vegetation_green', label: 'clean public area with greenery', severity_boost: 0 },
+            { condition: 'road_gray', label: 'well-maintained road surface', severity_boost: 0 },
+            { condition: 'default', label: 'no civic issue detected in image', severity_boost: 0 },
+        ],
+        department: { primary: 'N/A', secondary: 'N/A' },
+        base_severity: [0, 10],
+        description_template: 'No civic issue detected in this image. The area appears to be in normal condition. If you believe there is an issue, please describe it manually.',
+    },
 ];
 
 // Non-civic MobileNet classes (selfies, indoor, irrelevant)

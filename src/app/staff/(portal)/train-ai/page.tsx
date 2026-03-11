@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import type * as tfTypes from '@tensorflow/tfjs';
 import { toast } from 'sonner';
 
-const CLASSES = ['pothole', 'garbage', 'water', 'electricity', 'pollution', 'infrastructure'];
+const CLASSES = ['pothole', 'garbage', 'water', 'electricity', 'pollution', 'infrastructure', 'normal'];
 const IMG_SIZE = 224;
 const EPOCHS = 5;
 
