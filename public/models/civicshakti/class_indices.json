@@ -1,0 +1,8 @@
+{
+  "pothole": 0,
+  "garbage": 1,
+  "water": 2,
+  "electricity": 3,
+  "pollution": 4,
+  "infrastructure": 5
+}
