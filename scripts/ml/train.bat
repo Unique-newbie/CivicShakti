@@ -40,16 +40,20 @@ if exist ml_env\Scripts\activate.bat (
     echo  [OK] Environment created!
     echo.
 
-    echo [2b/6] Installing ML packages (first time only, may take a few minutes)...
+    echo [2b/6] Installing ML packages - first time only, may take a few minutes...
     python -m pip install --upgrade pip >nul 2>&1
-    pip install tensorflow==2.16.1 pillow
+    pip install tensorflow==2.15.1 pillow
     if %errorlevel% neq 0 (
         echo  ERROR: Failed to install TensorFlow. Check your internet connection.
         pause
         exit /b 1
     )
-    pip install tensorflowjs --no-deps
-    pip install tf_keras importlib_resources
+    pip install tensorflowjs==4.22.0 --no-deps
+    pip install tf_keras importlib_resources tensorflow_hub jax jaxlib
+    
+    :: Bypass tensorflow_decision_forests Windows incompatibility by mocking it
+    if not exist ml_env\Lib\site-packages\tensorflow_decision_forests mkdir ml_env\Lib\site-packages\tensorflow_decision_forests
+    echo. > ml_env\Lib\site-packages\tensorflow_decision_forests\__init__.py
     echo  [OK] All packages installed!
 )
 echo.
@@ -103,7 +107,7 @@ if %HAS_IMAGES%==0 (
     echo   dataset\pollution\             -- dataset\pollution_normal\
     echo   dataset\infrastructure\        -- dataset\infrastructure_normal\
     echo.
-    echo   Aim for 20-30 images per folder (JPG/PNG/WEBP).
+    echo   Aim for 20-30 images per folder - JPG, PNG, or WEBP.
     echo   Opening dataset folder for you...
     echo.
     explorer dataset
