@@ -4,14 +4,8 @@ color 0B
 
 echo.
 echo  ============================================================
-echo   _____ _       _      ____  _           _    _   _ 
-echo  / ____(_)     (_)    / ___|| |__   __ _| | _| |_(_)
-echo  | |    | __   __ ___| |___  | '_ \ / _` | |/ / __| |
-echo  | |    | \ \ / / / __\___ \ | | | | (_| |   ^<| |_| |
-echo  | |____| |\ V /| | (____)  || | | |\__,_|_|\_\\__|_|
-echo   \_____|_| \_/ |_|\___\____/ |_| |_|
-echo.
-echo         AI Model Training - One Click Setup
+echo         CivicShakti AI Model Training
+echo         One Click Setup, Train, and Deploy
 echo  ============================================================
 echo.
 
@@ -93,22 +87,21 @@ for /d %%D in (dataset\*) do (
     )
 )
 
-:no_images
 if %HAS_IMAGES%==0 (
     echo.
     echo  ============================================================
     echo   NO TRAINING IMAGES FOUND!
     echo  ============================================================
     echo.
-    echo   Please add images to these folders before training:
+    echo   Please add images to the folders inside dataset\
     echo.
-    echo   ISSUE PHOTOS:                    NORMAL PHOTOS:
-    echo   dataset\pothole\              ^<-^> dataset\pothole_normal\
-    echo   dataset\garbage\              ^<-^> dataset\garbage_normal\ 
-    echo   dataset\water_logging\        ^<-^> dataset\water_normal\
-    echo   dataset\power_issue\          ^<-^> dataset\electricity_normal\
-    echo   dataset\pollution\            ^<-^> dataset\pollution_normal\
-    echo   dataset\infrastructure\       ^<-^> dataset\infrastructure_normal\
+    echo   ISSUE PHOTOS:                     NORMAL PHOTOS:
+    echo   dataset\pothole\               -- dataset\pothole_normal\
+    echo   dataset\garbage\               -- dataset\garbage_normal\
+    echo   dataset\water_logging\         -- dataset\water_normal\
+    echo   dataset\power_issue\           -- dataset\electricity_normal\
+    echo   dataset\pollution\             -- dataset\pollution_normal\
+    echo   dataset\infrastructure\        -- dataset\infrastructure_normal\
     echo.
     echo   Aim for 20-30 images per folder (JPG/PNG/WEBP).
     echo   Opening dataset folder for you...
