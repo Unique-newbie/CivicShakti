@@ -66,6 +66,35 @@ interface StatusLog {
     createdAt: string;
 }
 
+// Map Appwrite document fields to our component interface
+function mapComplaint(doc: any): Complaint {
+    return {
+        id: doc.$id || doc.id,
+        ticketId: doc.ticketId || doc.tracking_id || '',
+        category: doc.category || '',
+        description: doc.description || '',
+        address: doc.address || '',
+        status: doc.status || 'pending',
+        imageUrl: doc.imageUrl || doc.image_url || null,
+        department: doc.department || '',
+        aiSeverity: doc.aiSeverity || doc.ai_severity || '',
+        notes: doc.notes || doc.staff_notes || '',
+        lat: doc.lat || doc.latitude || undefined,
+        lng: doc.lng || doc.longitude || undefined,
+        createdAt: doc.$createdAt || doc.createdAt || doc.created_at || '',
+        statusLogs: (doc.statusLogs || []).map((log: any) => ({
+            id: log.$id || log.id || '',
+            oldStatus: log.oldStatus || log.old_status || '',
+            newStatus: log.newStatus || log.new_status || '',
+            summary: log.summary || log.remarks || '',
+            updatedBy: log.updatedBy || log.updated_by || '',
+            createdAt: log.$createdAt || log.createdAt || log.created_at || '',
+        })),
+        citizenFeedbackRating: doc.citizenFeedbackRating || doc.citizen_feedback_rating || undefined,
+        citizenFeedbackText: doc.citizenFeedbackText || doc.citizen_feedback_text || undefined,
+    };
+}
+
 interface Complaint {
     id: string;
     ticketId: string;
@@ -86,13 +115,17 @@ interface Complaint {
 }
 
 function formatDate(dateStr: string) {
-    return new Date(dateStr).toLocaleDateString('en-IN', {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return 'N/A';
+    return d.toLocaleDateString('en-IN', {
         year: 'numeric', month: 'long', day: 'numeric'
     });
 }
 
 function formatDateTime(dateStr: string) {
-    return new Date(dateStr).toLocaleString('en-IN', {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return 'N/A';
+    return d.toLocaleString('en-IN', {
         year: 'numeric', month: 'short', day: 'numeric',
         hour: '2-digit', minute: '2-digit'
     });
@@ -100,6 +133,7 @@ function formatDateTime(dateStr: string) {
 
 function formatTimeAgo(dateStr: string) {
     const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return '';
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
@@ -138,8 +172,8 @@ export default function TrackDetail({ params }: { params: Promise<{ id: string }
                     setLoading(false);
                     return;
                 }
-                const complaint = await res.json();
-                setData(complaint);
+                const raw = await res.json();
+                setData(mapComplaint(raw));
             } catch (err) {
                 console.error("Error fetching data", err);
                 setError("Failed to fetch complaint details.");
@@ -331,7 +365,7 @@ export default function TrackDetail({ params }: { params: Promise<{ id: string }
                     </div>
                 </div>
 
-                <div className="grid lg:col-span-3 gap-6">
+                <div className="grid lg:grid-cols-3 gap-6">
                     {/* Main Column */}
                     <div className="lg:col-span-2 space-y-6">
                         {/* Complaint Description */}
@@ -418,7 +452,7 @@ export default function TrackDetail({ params }: { params: Promise<{ id: string }
                                                                         {formatDateTime(log.createdAt)}
                                                                     </span>
                                                                 </div>
-                                                                {log.summary && log.updatedBy === 'citizen' && (
+                                                                {log.summary && (
                                                                     <div className="mt-1.5 p-2.5 bg-slate-50 rounded-sm border border-slate-100 text-sm text-slate-600">
                                                                         {log.summary}
                                                                     </div>
@@ -440,61 +474,7 @@ export default function TrackDetail({ params }: { params: Promise<{ id: string }
                             </CardContent>
                         </Card>
 
-                        {/* Feedback Section (Only shown if resolved) */}
-                        {data.status === 'resolved' && (
-                            <Card className="rounded-sm border-emerald-200 shadow-none bg-emerald-50/50">
-                                <CardHeader className="pb-3 border-b border-emerald-100">
-                                    <CardTitle className="text-base font-bold text-emerald-900">Provide Feedback</CardTitle>
-                                </CardHeader>
-                                <CardContent className="pt-5 space-y-4">
-                                    {data.citizenFeedbackRating ? (
-                                        <div className="space-y-3">
-                                            <div className="flex gap-1">
-                                                {[1, 2, 3, 4, 5].map((star) => (
-                                                    <Star key={star} className={`w-5 h-5 ${star <= data.citizenFeedbackRating! ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`} />
-                                                ))}
-                                            </div>
-                                            {data.citizenFeedbackText && (
-                                                <p className="text-sm text-slate-700 italic border-l-2 border-emerald-300 pl-3">
-                                                    "{data.citizenFeedbackText}"
-                                                </p>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            <p className="text-sm text-slate-600">How satisfied are you with the resolution of this complaint?</p>
-                                            <div className="flex gap-2">
-                                                {[1, 2, 3, 4, 5].map((star) => (
-                                                    <button
-                                                        key={star}
-                                                        onClick={() => setRating(star)}
-                                                        onMouseEnter={() => setHoverRating(star)}
-                                                        onMouseLeave={() => setHoverRating(0)}
-                                                        className="focus:outline-none transition-transform hover:scale-110"
-                                                    >
-                                                        <Star className={`w-8 h-8 ${star <= (hoverRating || rating) ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`} />
-                                                    </button>
-                                                ))}
-                                            </div>
-                                            <textarea
-                                                className="w-full text-sm p-3 rounded-sm border border-emerald-200 outline-none focus:ring-2 focus:ring-emerald-500 min-h-[80px]"
-                                                placeholder="Any additional remarks? (Optional)"
-                                                value={feedbackText}
-                                                onChange={(e) => setFeedbackText(e.target.value)}
-                                            />
-                                            <Button
-                                                onClick={handleFeedbackSubmit}
-                                                disabled={submittingFeedback || rating === 0}
-                                                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-sm w-full sm:w-auto"
-                                            >
-                                                {submittingFeedback ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                                                Submit Feedback
-                                            </Button>
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )}
+                        {/* Feedback section is in the sidebar below */}
                     </div>
 
                     {/* Sidebar */}

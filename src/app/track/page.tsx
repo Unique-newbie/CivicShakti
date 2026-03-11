@@ -55,7 +55,7 @@ export default function TrackPage() {
 
                             <Button
                                 type="submit"
-                                className="w-full h-14 text-lg rounded-sm rounded-sm bg-slate-900 hover:bg-slate-800 text-white shadow-none disabled:opacity-70 disabled:cursor-not-allowed"
+                                className="w-full h-14 text-lg rounded-sm bg-slate-900 hover:bg-slate-800 text-white shadow-none disabled:opacity-70 disabled:cursor-not-allowed"
                                 disabled={!trackingId.trim() || isLoading}
                             >
                                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : t("track.btn")}

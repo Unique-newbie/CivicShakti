@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { ShieldAlert, Info } from 'lucide-react';
 import { ClientAuthNav } from '@/components/ClientAuthNav';
 import { useLanguage } from '@/context/LanguageContext';
+import { Footer } from '@/components/Footer';
 
 // Dynamically import the map to disable SSR
 const PublicMap = dynamic(() => import('@/components/PublicMap'), {
@@ -54,6 +55,8 @@ export default function ExplorePage() {
                     </div>
                 </div>
             </main>
+
+            <Footer />
         </div>
     );
 }
