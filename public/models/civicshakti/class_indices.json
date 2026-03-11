@@ -1,8 +1,1 @@
-{
-  "pothole": 0,
-  "garbage": 1,
-  "water": 2,
-  "electricity": 3,
-  "pollution": 4,
-  "infrastructure": 5
-}
+{"0": "electricity_normal", "1": "garbage", "2": "garbage_normal", "3": "infrastructure", "4": "infrastructure_normal", "5": "normal", "6": "pollution", "7": "pollution_normal", "8": "pothole", "9": "pothole_normal", "10": "power_issue", "11": "water_logging", "12": "water_normal"}
