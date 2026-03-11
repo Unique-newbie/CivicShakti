@@ -12,6 +12,7 @@
  */
 
 import * as tf from '@tensorflow/tfjs';
+// @ts-ignore — coco-ssd has no bundled type declarations
 import * as cocoSsd from '@tensorflow-models/coco-ssd';
 
 // =====================================================
