@@ -128,6 +128,18 @@ export function StaffLayoutShell({
                         App Stats
                     </Link>
                     <Link
+                        href="/staff/train-ai"
+                        onClick={closeSidebar}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-sm transition-colors ${pathname === "/staff/train-ai"
+                            ? "bg-blue-600/10 text-blue-400 font-medium"
+                            : "text-slate-300 hover:bg-slate-800"
+                            }`}
+                    >
+                        <AlertOctagon className="w-5 h-5 hidden" />
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-brain-circuit"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M9 13a4.5 4.5 0 0 0 3-4"/><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"/><path d="M3.477 10.896a4 4 0 0 1 .585-.396"/><path d="M6 18a4 4 0 0 1-1.968-3.568"/><path d="M12 18a4 4 0 0 1-4.466-3.925"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4"/><path d="M17.997 5.125A3 3 0 0 1 17.599 6.5"/><path d="M20.523 10.896a4 4 0 0 0-.585-.396"/><path d="M18 18a4 4 0 0 0 1.968-3.568"/><path d="M12 18a4 4 0 0 0 4.466-3.925"/></svg>
+                        Train AI Model
+                    </Link>
+                    <Link
                         href="/staff/errors"
                         onClick={closeSidebar}
                         className={`flex items-center gap-3 px-3 py-2.5 rounded-sm transition-colors ${pathname === "/staff/errors"
@@ -167,6 +179,7 @@ export function StaffLayoutShell({
                                 {pathname.startsWith("/staff/users") && "Citizens"}
                                 {pathname.startsWith("/staff/accounts") && "User Accounts"}
                                 {pathname === "/staff/stats" && "App Stats"}
+                                {pathname === "/staff/train-ai" && "Train Custom AI Model"}
                                 {pathname === "/staff/errors" && "System Errors"}
                             </span>
                         </div>

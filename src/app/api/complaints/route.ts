@@ -42,18 +42,44 @@ export async function POST(req: NextRequest) {
         // Generate tracking ID
         const tracking_id = 'CS-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
 
-        // AI Analysis
+        // Process Base64 Image and AI
         let aiData: any = {};
+        let finalImageUrl = image_url || null;
+
         try {
             let base64Image: string | undefined;
             let mimeType: string | undefined;
+            
             if (image_url && image_url.startsWith('data:')) {
                 const match = image_url.match(/^data:(.+?);base64,(.+)$/);
                 if (match) {
                     mimeType = match[1];
                     base64Image = match[2];
+
+                    if (base64Image && mimeType) {
+                        // Upload image to Appwrite Storage to avoid 1000-char DB limit
+                        try {
+                            const { serverStorage } = await import('@/lib/appwrite-server');
+                            const { InputFile } = await import('node-appwrite/file');
+                            const buffer = Buffer.from(base64Image, 'base64');
+                            const file = InputFile.fromBuffer(buffer, `upload-${Date.now()}.${mimeType.split('/')[1] || 'jpg'}`);
+                        const bucketId = process.env.NEXT_PUBLIC_APPWRITE_STORAGE_ID || 'complaint_images';
+                        
+                        const upload = await serverStorage.createFile(bucketId, ID.unique(), file);
+                        const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
+                        const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
+                        
+                        // Construct the view URL
+                        finalImageUrl = `${endpoint}/storage/buckets/${bucketId}/files/${upload.$id}/view?project=${projectId}`;
+                    } catch (uploadError) {
+                        console.error('Failed to upload image to storage:', uploadError);
+                        // Do not save the raw base64 string to avoid DB limit exception
+                        finalImageUrl = null;
+                    }
+                    }
                 }
             }
+
             const analysis = await analyzeComplaint(category, description, base64Image, mimeType);
             aiData = {
                 ai_priority_score: analysis.priority_score,
@@ -71,7 +97,7 @@ export async function POST(req: NextRequest) {
             address: address || 'Location Pending',
             lat: lat || null,
             lng: lng || null,
-            image_url: image_url || null,
+            image_url: finalImageUrl,
             status: 'pending',
             device_fingerprint: device_fingerprint || null,
             state_id: state_id || null,

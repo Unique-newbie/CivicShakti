@@ -278,11 +278,14 @@ const NON_CIVIC_CLASSES = new Set([
 
 let cocoModel: cocoSsd.ObjectDetection | null = null;
 let mobilenetModel: tf.GraphModel | null = null;
+let customModel: tf.LayersModel | null = null;
 let isLoading = false;
 let loadPromise: Promise<void> | null = null;
 
 // MobileNet V2 ImageNet class labels (top-level, loaded dynamically)
 let imagenetClasses: string[] = [];
+// Custom trained classes
+const customClasses: string[] = ['pothole', 'garbage', 'water', 'electricity', 'pollution', 'infrastructure'];
 
 /**
  * Load both models (COCO-SSD + MobileNet V2).
@@ -308,6 +311,15 @@ export async function loadModels(): Promise<void> {
 
             cocoModel = coco;
             mobilenetModel = mobilenet;
+
+            // Try loading the custom trained model (if it exists)
+            try {
+                customModel = await tf.loadLayersModel('/models/civicshakti/model.json');
+                console.log('[CivicAI] Custom trained model loaded successfully from /models/civicshakti');
+            } catch (e) {
+                console.log('[CivicAI] Custom trained model not found at /models/civicshakti. Using primary heuristic engine fallback.');
+                customModel = null;
+            }
 
             // Load ImageNet class labels
             try {
@@ -350,15 +362,16 @@ export async function analyzeImage(imageElement: HTMLImageElement | HTMLCanvasEl
         await loadModels();
 
         // Run all analysis stages in parallel
-        const [objects, mobilenetResults, colorProfile, textureProfile] = await Promise.all([
+        const [objects, mobilenetResults, colorProfile, textureProfile, customMdlResults] = await Promise.all([
             detectObjects(imageElement),
             classifyWithMobileNet(imageElement),
             analyzeColors(imageElement),
             analyzeTexture(imageElement),
+            classifyWithCustomModel(imageElement)
         ]);
 
         // Fuse all signals into a civic issue classification
-        return classifyIssue(objects, mobilenetResults, colorProfile, textureProfile);
+        return classifyIssue(objects, mobilenetResults, colorProfile, textureProfile, customMdlResults);
     } catch (error) {
         console.error('[CivicAI] Analysis failed:', error);
         return getDefaultAnalysis();
@@ -396,7 +409,7 @@ async function detectObjects(imageElement: HTMLImageElement | HTMLCanvasElement)
     if (!cocoModel) return [];
     try {
         const predictions = await cocoModel.detect(imageElement, 20, 0.3);
-        return predictions.map(p => ({
+        return predictions.map((p: any) => ({
             class: p.class,
             score: Math.round(p.score * 100) / 100,
             bbox: p.bbox as [number, number, number, number],
@@ -590,11 +603,52 @@ function analyzeTexture(imageElement: HTMLImageElement | HTMLCanvasElement): Tex
 // FUSION CLASSIFIER — Combines all signals
 // =====================================================
 
+async function classifyWithCustomModel(
+    imageElement: HTMLImageElement | HTMLCanvasElement
+): Promise<{ className: string; probability: number } | null> {
+    if (!customModel) return null;
+    try {
+        const tensor = tf.tidy(() => {
+            const img = tf.browser.fromPixels(imageElement);
+            const resized = tf.image.resizeBilinear(img, [224, 224]);
+            const normalized = resized.div(255.0);
+            return normalized.expandDims(0); // Batch size 1
+        });
+
+        const prediction = customModel.predict(tensor) as tf.Tensor;
+        const data = await prediction.data();
+        tensor.dispose();
+        prediction.dispose();
+
+        // Find max probability
+        let maxIndex = 0;
+        let maxProb = 0;
+        for (let i = 0; i < data.length; i++) {
+            if (data[i] > maxProb) {
+                maxProb = data[i];
+                maxIndex = i;
+            }
+        }
+
+        if (maxIndex < customClasses.length) {
+            return {
+                className: customClasses[maxIndex],
+                probability: Math.round(maxProb * 10000) / 10000
+            };
+        }
+        return null;
+    } catch (e) {
+        console.warn('[CivicAI] Custom ML classification failed:', e);
+        return null;
+    }
+}
+
 function classifyIssue(
     objects: DetectedObject[],
     mobilenetResults: { className: string; probability: number }[],
     colorProfile: ColorProfile,
-    textureProfile: TextureProfile
+    textureProfile: TextureProfile,
+    customMdlResult?: { className: string; probability: number } | null
 ): CivicAnalysis {
     const objectNames = objects.map(o => o.class);
     const mobilenetNames = mobilenetResults.map(m => m.className.toLowerCase());
@@ -614,69 +668,78 @@ function classifyIssue(
         let score = 0;
         const signals: string[] = [];
 
-        // Signal 1: COCO-SSD objects (weight: 25%)
-        let objectScore = 0;
-        for (const obj of objects) {
-            const weight = profile.object_signals[obj.class];
-            if (weight) {
-                objectScore += weight * obj.score;
-                signals.push(`obj:${obj.class}`);
+        // If we have a high-confidence custom model prediction, it overrides heuristic weights
+        if (customMdlResult && customMdlResult.probability > 0.6) {
+            if (profile.id === customMdlResult.className) {
+                score += customMdlResult.probability * 100; // massive boost
+                signals.push(`custom_ml:${customMdlResult.className}`);
             }
-        }
-        score += Math.min(objectScore, 1) * 25;
-
-        // Signal 2: MobileNet classes (weight: 35%)
-        let mobilenetScore = 0;
-        for (const result of mobilenetResults) {
-            const className = result.className.toLowerCase();
-            for (const [key, weight] of Object.entries(profile.mobilenet_signals)) {
-                if (className.includes(key.toLowerCase())) {
-                    mobilenetScore += weight * result.probability;
-                    signals.push(`mn:${key}`);
+        } else {
+            // Standard Heuristic Engine (Fallback / Primary if custom model absent)
+            // Signal 1: COCO-SSD objects (weight: 25%)
+            let objectScore = 0;
+            for (const obj of objects) {
+                const weight = profile.object_signals[obj.class];
+                if (weight) {
+                    objectScore += weight * obj.score;
+                    signals.push(`obj:${obj.class}`);
                 }
             }
-        }
-        score += Math.min(mobilenetScore, 1) * 35;
+            score += Math.min(objectScore, 1) * 25;
 
-        // Signal 3: Color analysis (weight: 20%)
-        let colorScore = 0;
-        if (profile.color_signals.road_gray && colorProfile.has_road_gray) {
-            colorScore += profile.color_signals.road_gray;
-            signals.push('color:gray');
-        }
-        if (profile.color_signals.water_blue && colorProfile.has_water_blue) {
-            colorScore += profile.color_signals.water_blue;
-            signals.push('color:blue');
-        }
-        if (profile.color_signals.vegetation_green && colorProfile.has_vegetation_green) {
-            colorScore += profile.color_signals.vegetation_green;
-            signals.push('color:green');
-        }
-        if (profile.color_signals.dirt_brown && colorProfile.has_dirt_brown) {
-            colorScore += profile.color_signals.dirt_brown;
-            signals.push('color:brown');
-        }
-        if (profile.color_signals.dark && colorProfile.has_night_dark) {
-            colorScore += profile.color_signals.dark;
-            signals.push('color:dark');
-        }
-        score += Math.min(colorScore, 1) * 20;
+            // Signal 2: MobileNet classes (weight: 35%)
+            let mobilenetScore = 0;
+            for (const result of mobilenetResults) {
+                const className = result.className.toLowerCase();
+                for (const [key, weight] of Object.entries(profile.mobilenet_signals)) {
+                    if (className.includes(key.toLowerCase())) {
+                        mobilenetScore += weight * result.probability;
+                        signals.push(`mn:${key}`);
+                    }
+                }
+            }
+            score += Math.min(mobilenetScore, 1) * 35;
 
-        // Signal 4: Texture analysis (weight: 20%)
-        let textureScore = 0;
-        if (profile.texture_signals.high_edge_density && textureProfile.edge_density > 0.4) {
-            textureScore += profile.texture_signals.high_edge_density * textureProfile.edge_density;
-            signals.push('tex:edges');
+            // Signal 3: Color analysis (weight: 20%)
+            let colorScore = 0;
+            if (profile.color_signals.road_gray && colorProfile.has_road_gray) {
+                colorScore += profile.color_signals.road_gray;
+                signals.push('color:gray');
+            }
+            if (profile.color_signals.water_blue && colorProfile.has_water_blue) {
+                colorScore += profile.color_signals.water_blue;
+                signals.push('color:blue');
+            }
+            if (profile.color_signals.vegetation_green && colorProfile.has_vegetation_green) {
+                colorScore += profile.color_signals.vegetation_green;
+                signals.push('color:green');
+            }
+            if (profile.color_signals.dirt_brown && colorProfile.has_dirt_brown) {
+                colorScore += profile.color_signals.dirt_brown;
+                signals.push('color:brown');
+            }
+            if (profile.color_signals.dark && colorProfile.has_night_dark) {
+                colorScore += profile.color_signals.dark;
+                signals.push('color:dark');
+            }
+            score += Math.min(colorScore, 1) * 20;
+
+            // Signal 4: Texture analysis (weight: 20%)
+            let textureScore = 0;
+            if (profile.texture_signals.high_edge_density && textureProfile.edge_density > 0.4) {
+                textureScore += profile.texture_signals.high_edge_density * textureProfile.edge_density;
+                signals.push('tex:edges');
+            }
+            if (profile.texture_signals.low_uniformity && textureProfile.uniformity < 0.5) {
+                textureScore += profile.texture_signals.low_uniformity * (1 - textureProfile.uniformity);
+                signals.push('tex:rough');
+            }
+            if (profile.texture_signals.high_roughness && textureProfile.roughness > 0.3) {
+                textureScore += profile.texture_signals.high_roughness * textureProfile.roughness;
+                signals.push('tex:uneven');
+            }
+            score += Math.min(textureScore, 1) * 20;
         }
-        if (profile.texture_signals.low_uniformity && textureProfile.uniformity < 0.5) {
-            textureScore += profile.texture_signals.low_uniformity * (1 - textureProfile.uniformity);
-            signals.push('tex:rough');
-        }
-        if (profile.texture_signals.high_roughness && textureProfile.roughness > 0.3) {
-            textureScore += profile.texture_signals.high_roughness * textureProfile.roughness;
-            signals.push('tex:uneven');
-        }
-        score += Math.min(textureScore, 1) * 20;
 
         scores[profile.id] = { score, signals };
     }

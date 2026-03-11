@@ -41,3 +41,12 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# ML Training artifacts
+scripts/ml/venv_ml/
+scripts/ml/ml_env/
+scripts/ml/dataset/
+scripts/ml/tfjs_model/
+scripts/ml/node_modules/
+scripts/ml/*.keras
+scripts/ml/class_indices.json

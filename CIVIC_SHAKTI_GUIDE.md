@@ -107,6 +107,17 @@ The Staff Portal (`/staff`) is the backend management interface for officials. A
 - A technical log of API errors, failed background jobs, and database issues.
 - Helps developers and admins troubleshoot why a feature might be failing without needing SSH access to the server.
 
+### 🤖 AI Model Trainer (`/staff/train-ai`) - *Staff Only*
+- Upload categorized images of civic issues (potholes, garbage, etc.) directly in the browser.
+- Trains a custom MobileNetV2 transfer learning model using TensorFlow.js.
+- Downloads the resulting `model.json`, `model.weights.bin`, and `class_indices.json` files.
+- Place these files in `public/models/civicshakti/` — the app detects and uses them automatically.
+
+### 🟢 Public Status Page (`/status`)
+- Displays real-time health checks for all backend services (API, Database, Auth, Storage, AI).
+- Shows individual latency measurements and operational status for each service.
+- Accessible to all users without logging in.
+
 ---
 
 ## 6. Hierarchical Delegation System
@@ -128,11 +139,14 @@ You can only assign roles *inside* your borders.
 
 ## 7. Technical Stack & Integrations
 For developers maintaining the system:
-- **Frontend / Backend**: Next.js 14 (App Router) with React, TypeScript, and Tailwind CSS.
+- **Frontend / Backend**: Next.js 16 (App Router, Turbopack) with React 19, TypeScript, and Tailwind CSS 4.
 - **UI Components**: Shadcn UI (Radix UI primitives), Lucide Icons, Recharts for graphs.
 - **Database & Auth**: Appwrite (Self-hosted or Cloud). Manages Auth, Databases (Profiles, Complaints, Error Logs), and Storage (Media uploads).
+- **AI Engine**: Dual-pipeline — Google Gemini 2.0 Flash Vision API (with few-shot prompting for Indian civic context) + TensorFlow.js (MobileNet V2 + COCO-SSD + custom trained model).
 - **API Architecture**: Next.js Route Handlers (`/api/...`). Server-side code uses `@node-appwrite` SDK using a secure API Key to bypass complex user ACLs when necessary.
 - **Security**: JWT-based session verification (`getAuthJWT()`) on all protective API routes, combined with strict Role-Based Access Control (RBAC) checking the user's `labels`.
+- **Maps**: Leaflet.js with React-Leaflet for geographic heatmaps.
+- **Deployment**: Vercel (serverless). All API routes are serverless-compatible.
 
 ---
 *Created for CivicShakti Admins and Developers.*

@@ -221,6 +221,27 @@ Your task is to perform a COMPREHENSIVE analysis of the provided image:
 - Check if image looks like a genuine fresh capture vs. stock photo/screenshot
 - Give the citizen helpful suggestions to improve their report
 
+## EXAMPLES (Training Data for Indian Context)
+1. **Garbage on street corner**:
+   - Sub-type: "Overflowing municipal waste bin with scattered garbage on sidewalk"
+   - Severity: 55 (HIGH) -> Health hazard, blocking pedestrian path
+   - Dept: Sanitation Department / Solid Waste Management
+
+2. **Open manhole during monsoon**:
+   - Sub-type: "Missing manhole cover on flooded street"
+   - Severity: 95 (CRITICAL) -> Extreme danger, safety_hazard: true
+   - Dept: Water Supply & Sewerage Board / Pipeline Maintenance
+
+3. **Hanging electric wires**:
+   - Sub-type: "Low-hanging tangled live wires near residential building"
+   - Severity: 88 (CRITICAL) -> Electrocution risk, safety_hazard: true
+   - Dept: State Electricity Board / Street Lighting Division
+
+4. **Minor road crack**:
+   - Sub-type: "Surface-level cracks on asphalt road"
+   - Severity: 20 (LOW) -> Does not immediately impede traffic
+   - Dept: Public Works Department / Road Maintenance Division
+
 IMPORTANT RULES:
 - Be accurate and specific in sub-type detection (don't just say "pothole", say "medium-sized pothole with water accumulation on main road")
 - Be honest about confidence — if the image is blurry or ambiguous, say so
