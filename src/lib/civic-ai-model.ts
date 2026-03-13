@@ -303,7 +303,6 @@ const NON_CIVIC_CLASSES = new Set([
 
 let cocoModel: cocoSsd.ObjectDetection | null = null;
 let mobilenetModel: tf.GraphModel | null = null;
-let customModel: tf.LayersModel | null = null;
 let customDetectionModel: tf.GraphModel | null = null;
 let isLoading = false;
 let loadPromise: Promise<void> | null = null;
@@ -338,14 +337,7 @@ export async function loadModels(): Promise<void> {
             cocoModel = coco;
             mobilenetModel = mobilenet;
 
-            // Try loading the custom trained models (if they exist)
-            try {
-                customModel = await tf.loadLayersModel('/models/civicshakti/model.json');
-                console.log('[CivicAI] Custom classification model loaded successfully');
-            } catch (e) {
-                console.log('[CivicAI] Custom classification model not found. Using primary heuristic engine fallback.');
-                customModel = null;
-            }
+            // Load custom trained models (if they exist)
 
             try {
                 customDetectionModel = await tf.loadGraphModel('/models/potholes_od/model.json');
@@ -396,16 +388,15 @@ export async function analyzeImage(imageElement: HTMLImageElement | HTMLCanvasEl
         await loadModels();
 
         // Run all analysis stages in parallel
-        const [objects, mobilenetResults, colorProfile, textureProfile, customMdlResults] = await Promise.all([
+        const [objects, mobilenetResults, colorProfile, textureProfile] = await Promise.all([
             detectObjects(imageElement),
             classifyWithMobileNet(imageElement),
             analyzeColors(imageElement),
             analyzeTexture(imageElement),
-            classifyWithCustomModel(imageElement)
         ]);
 
         // Fuse all signals into a civic issue classification
-        return classifyIssue(objects, mobilenetResults, colorProfile, textureProfile, customMdlResults);
+        return classifyIssue(objects, mobilenetResults, colorProfile, textureProfile);
     } catch (error) {
         console.error('[CivicAI] Analysis failed:', error);
         return getDefaultAnalysis();
@@ -727,45 +718,8 @@ function analyzeTexture(imageElement: HTMLImageElement | HTMLCanvasElement): Tex
 // FUSION CLASSIFIER — Combines all signals
 // =====================================================
 
-async function classifyWithCustomModel(
-    imageElement: HTMLImageElement | HTMLCanvasElement
-): Promise<{ className: string; probability: number } | null> {
-    if (!customModel) return null;
-    try {
-        const tensor = tf.tidy(() => {
-            const img = tf.browser.fromPixels(imageElement);
-            const resized = tf.image.resizeBilinear(img, [224, 224]);
-            const normalized = resized.div(255.0);
-            return normalized.expandDims(0); // Batch size 1
-        });
 
-        const prediction = customModel.predict(tensor) as tf.Tensor;
-        const data = await prediction.data();
-        tensor.dispose();
-        prediction.dispose();
 
-        // Find max probability
-        let maxIndex = 0;
-        let maxProb = 0;
-        for (let i = 0; i < data.length; i++) {
-            if (data[i] > maxProb) {
-                maxProb = data[i];
-                maxIndex = i;
-            }
-        }
-
-        if (maxIndex < customClasses.length) {
-            return {
-                className: customClasses[maxIndex],
-                probability: Math.round(maxProb * 10000) / 10000
-            };
-        }
-        return null;
-    } catch (e) {
-        console.warn('[CivicAI] Custom ML classification failed:', e);
-        return null;
-    }
-}
 
 function classifyIssue(
     objects: DetectedObject[],

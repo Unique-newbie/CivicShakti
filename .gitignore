@@ -50,3 +50,7 @@ scripts/ml/tfjs_model/
 scripts/ml/node_modules/
 scripts/ml/*.keras
 scripts/ml/class_indices.json
+scripts/ml/*.pt
+scripts/ml/*.npy
+scripts/ml/civic_ai_models/
+runs/

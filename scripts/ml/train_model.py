@@ -36,13 +36,30 @@ def create_model(num_classes):
 def main():
     print(f"TensorFlow Version: {tf.__version__}")
     
+    # Force GPU usage — use dedicated NVIDIA GPU, not CPU
+    gpus = tf.config.list_physical_devices('GPU')
+    if gpus:
+        try:
+            # Use only the first dedicated GPU
+            tf.config.set_visible_devices(gpus[0], 'GPU')
+            # Enable memory growth so TF doesn't grab all VRAM at once
+            tf.config.experimental.set_memory_growth(gpus[0], True)
+            print(f"\n✅ Using GPU: {gpus[0].name}")
+            print(f"   Total GPUs available: {len(gpus)}")
+        except RuntimeError as e:
+            print(f"⚠️ GPU setup error: {e}")
+    else:
+        print("\n⚠️ WARNING: No GPU detected! Training will be SLOW on CPU.")
+        print("   Make sure you have NVIDIA drivers + CUDA + cuDNN installed.")
+        print("   Install GPU TensorFlow: pip install tensorflow[and-cuda]")
+    
     # 1. Check for dataset
-    base_dir = 'dataset'
+    base_dir = os.path.join('dataset', 'garbage_classification')
     
     if not os.path.exists(base_dir):
         print(f"ERROR: Dataset directory '{base_dir}' not found!")
-        print(f"Please create a '{base_dir}' folder in this directory, and inside it create folders for each category:")
-        print(f"Example: dataset/pothole/, dataset/garbage/, etc.")
+        print(f"Please create a '{base_dir}' folder with category subfolders inside it.")
+        print(f"Example: dataset/garbage_classification/battery/, dataset/garbage_classification/biological/, etc.")
         sys.exit(1)
         
     print("Preparing data generators...")
