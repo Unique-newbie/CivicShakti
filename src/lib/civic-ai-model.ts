@@ -304,6 +304,7 @@ const NON_CIVIC_CLASSES = new Set([
 let cocoModel: cocoSsd.ObjectDetection | null = null;
 let mobilenetModel: tf.GraphModel | null = null;
 let customModel: tf.LayersModel | null = null;
+let customDetectionModel: tf.GraphModel | null = null;
 let isLoading = false;
 let loadPromise: Promise<void> | null = null;
 
@@ -337,13 +338,21 @@ export async function loadModels(): Promise<void> {
             cocoModel = coco;
             mobilenetModel = mobilenet;
 
-            // Try loading the custom trained model (if it exists)
+            // Try loading the custom trained models (if they exist)
             try {
                 customModel = await tf.loadLayersModel('/models/civicshakti/model.json');
-                console.log('[CivicAI] Custom trained model loaded successfully from /models/civicshakti');
+                console.log('[CivicAI] Custom classification model loaded successfully');
             } catch (e) {
-                console.log('[CivicAI] Custom trained model not found at /models/civicshakti. Using primary heuristic engine fallback.');
+                console.log('[CivicAI] Custom classification model not found. Using primary heuristic engine fallback.');
                 customModel = null;
+            }
+
+            try {
+                customDetectionModel = await tf.loadGraphModel('/models/potholes_od/model.json');
+                console.log('[CivicAI] Custom YOLOv8 detection model loaded successfully');
+            } catch (e) {
+                console.log('[CivicAI] Custom YOLOv8 detection model not found. Using COCO-SSD fallback.');
+                customDetectionModel = null;
             }
 
             // Load ImageNet class labels
@@ -431,17 +440,107 @@ export const detectFromBase64 = analyzeFromBase64;
 // =====================================================
 
 async function detectObjects(imageElement: HTMLImageElement | HTMLCanvasElement): Promise<DetectedObject[]> {
-    if (!cocoModel) return [];
-    try {
-        const predictions = await cocoModel.detect(imageElement, 20, 0.3);
-        return predictions.map((p: any) => ({
-            class: p.class,
-            score: Math.round(p.score * 100) / 100,
-            bbox: p.bbox as [number, number, number, number],
-        }));
-    } catch {
-        return [];
+    let objects: DetectedObject[] = [];
+
+    // 1. Custom YOLOv8 Detection
+    if (customDetectionModel) {
+        try {
+            // Get original dimensions for bounding box scaling
+            let origW = imageElement.width;
+            let origH = imageElement.height;
+            if (imageElement instanceof HTMLImageElement) {
+                origW = imageElement.naturalWidth || origW;
+                origH = imageElement.naturalHeight || origH;
+            }
+
+            const x_scale = origW / 224;
+            const y_scale = origH / 224;
+
+            const tensor = tf.tidy(() => {
+                const img = tf.browser.fromPixels(imageElement);
+                const resized = tf.image.resizeBilinear(img, [224, 224]);
+                return resized.div(255.0).expandDims(0);
+            });
+
+            const predTensor = await customDetectionModel.predict(tensor) as tf.Tensor3D;
+            tensor.dispose();
+
+            // Perform Non-Maximum Suppression handling on [batch, 4+num_classes, num_anchors]
+            const [nmsBoxes, scores_tensor, boxes_tensor] = tf.tidy(() => {
+                const trans = predTensor.transpose([0, 2, 1]); // -> [1, anchors, 5]
+                const squeezed = trans.squeeze([0]); // -> [anchors, 5]
+                
+                const b_tensor = squeezed.slice([0, 0], [-1, 4]); // -> (cx, cy, w, h)
+                const s_tensor = squeezed.slice([0, 4], [-1, 1]).squeeze([1]); // -> object scores
+                
+                // Convert cx,cy,w,h to ymin,xmin,ymax,xmax for NMS
+                const cx = b_tensor.slice([0, 0], [-1, 1]);
+                const cy = b_tensor.slice([0, 1], [-1, 1]);
+                const w = b_tensor.slice([0, 2], [-1, 1]);
+                const h = b_tensor.slice([0, 3], [-1, 1]);
+
+                const w2 = w.div(2);
+                const h2 = h.div(2);
+                const y1 = cy.sub(h2);
+                const x1 = cx.sub(w2);
+                const y2 = cy.add(h2);
+                const x2 = cx.add(w2);
+
+                const nmsB = tf.concat([y1, x1, y2, x2], 1);
+                return [nmsB, s_tensor, b_tensor];
+            });
+
+            // Handle NMS Async without blocking main thread
+            const indices = await tf.image.nonMaxSuppressionAsync(nmsBoxes as tf.Tensor2D, scores_tensor as tf.Tensor1D, 20, 0.45, 0.35);
+            
+            const indicesArray = await indices.array();
+            const boxesArr = await (boxes_tensor as tf.Tensor2D).array();
+            const scoresArr = await (scores_tensor as tf.Tensor1D).array();
+
+            nmsBoxes.dispose();
+            scores_tensor.dispose();
+            boxes_tensor.dispose();
+            indices.dispose();
+            predTensor.dispose();
+
+            for (const idx of indicesArray) {
+                const [cx, cy, w, h] = boxesArr[idx];
+                const score = scoresArr[idx];
+                
+                objects.push({
+                    class: 'pothole', // Hardcoded as mapped from YOLOv8 class 0
+                    score: Math.round(score * 100) / 100,
+                    bbox: [
+                        Math.round((cx - w/2) * x_scale), 
+                        Math.round((cy - h/2) * y_scale), 
+                        Math.round(w * x_scale), 
+                        Math.round(h * y_scale)
+                    ]
+                });
+            }
+        } catch (e) {
+            console.error('[CivicAI] Custom detection failed:', e);
+        }
     }
+
+    // 2. COCO-SSD (Fallback + extra signals)
+    if (cocoModel) {
+        try {
+            const predictions = await cocoModel.detect(imageElement, 20, 0.3);
+            const cocoObjects = predictions.map((p: any) => ({
+                class: p.class,
+                score: Math.round(p.score * 100) / 100,
+                bbox: p.bbox as [number, number, number, number],
+            }));
+            
+            // Combine YOLO and COCO-SSD predictions
+            objects = objects.concat(...cocoObjects);
+        } catch (e) {
+            console.warn('[CivicAI] COCO-SSD fallback failed:', e);
+        }
+    }
+
+    return objects;
 }
 
 // =====================================================
